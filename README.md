@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [![Build Status](https://travis-ci.org/alibaba/dubbo.svg?branch=master)](https://travis-ci.org/alibaba/dubbo) [![Gitter](https://badges.gitter.im/alibaba/dubbo.svg)](https://gitter.im/alibaba/dubbo?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 Dubbo is a distributed, high performance RPC framework enpowering applications with service import/export capabilities.
@@ -201,3 +202,7 @@ cd ../bin
     http://root:root@127.0.0.1:8080
 ```
 
+=======
+# dubbo-learning
+代码都是Dubbo的代码，只不过通过自己的解读加了很多注释方便自己学习
+>>>>>>> 2172a52ee5dee74b87ec705637699bb55450ddb9

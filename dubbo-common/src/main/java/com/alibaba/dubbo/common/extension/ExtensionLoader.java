@@ -113,11 +113,12 @@ public class ExtensionLoader<T> {
         if(!type.isInterface()) {
             throw new IllegalArgumentException("Extension type(" + type + ") is not interface!");
         }
+        //获得某个扩展类加载器的时候该接口必须被@SPI修饰才可以
         if(!withExtensionAnnotation(type)) {
             throw new IllegalArgumentException("Extension type(" + type + 
                     ") is not extension, because WITHOUT @" + SPI.class.getSimpleName() + " Annotation!");
         }
-        // 先从静态缓存中获取对应的ExtensionLoader实例
+        // 先从静态缓存中获取对应的ExtensionLoader实例，每个接口对应一个ExtensionLoader并且把映射关系都存储在缓存之中
         ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         if (loader == null) {
             // 为Extension类型创建ExtensionLoader实例，并放入静态缓存
@@ -131,6 +132,7 @@ public class ExtensionLoader<T> {
     // 这里通过getAdaptiveExtension方法获取一个运行时自适应的扩展类型(每个Extension只能有一个@Adaptive类型的实现，如果没有dubbo会动态生成一个类)
     private ExtensionLoader(Class<?> type) {
         this.type = type;
+        //判断type类型是否为ExtensionFactory类型，如果是的话就设置objectFactory为空，否则的话就设置ObjectFactory为适配工厂类
         objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
     }
     public String getExtensionName(T extensionInstance) {
@@ -455,6 +457,7 @@ public class ExtensionLoader<T> {
         Object instance = cachedAdaptiveInstance.get();
         if (instance == null) {
             if(createAdaptiveInstanceError == null) {
+                //采用单例模式的双重判断，这种模式感觉使用的范围都比较广泛
                 synchronized (cachedAdaptiveInstance) {
                     instance = cachedAdaptiveInstance.get();
                     if (instance == null) {
@@ -530,7 +533,7 @@ public class ExtensionLoader<T> {
                     type + ")  could not be instantiated: " + t.getMessage(), t);
         }
     }
-    //通过反射自动调用instance的set方法把自身的属性注入进去，也就是使instance更加丰满
+    //通过反射自动调用instance的set方法把自身的属性注入进去，解决的扩展类依赖问题，也就是说解决扩展类依赖扩展类的问题
     private T injectExtension(T instance) {
         try {
             if (objectFactory != null) {
@@ -542,7 +545,7 @@ public class ExtensionLoader<T> {
                         try {
                             //得到属性名称，比如setName方法就得到name属性名称
                             String property = method.getName().length() > 3 ? method.getName().substring(3, 4).toLowerCase() + method.getName().substring(4) : "";
-                            Object object = objectFactory.getExtension(pt, property);// 根据类型，名称信息从ExtensionFactory获取
+                            Object object = objectFactory.getExtension(pt, property);//从获得属性值
                             if (object != null) {
                                 method.invoke(instance, object);// 如果不为空，说明set方法的参数是扩展点类型，那么进行注入，意思也就是说扩展点里面还有依赖其他扩展点
                             }
@@ -590,6 +593,7 @@ public class ExtensionLoader<T> {
         if(defaultAnnotation != null) {
             String value = defaultAnnotation.value();
             if(value != null && (value = value.trim()).length() > 0) {
+                //一个@SPI注解的值只能有一个
                 String[] names = NAME_SEPARATOR.split(value);
                 if(names.length > 1) {
                     throw new IllegalStateException("more than 1 default extension name on extension " + type.getName()
@@ -648,13 +652,14 @@ public class ExtensionLoader<T> {
                                                 if(cachedAdaptiveClass == null) {
                                                     //将缓存的AdaptiveClass设置成此类
                                                     cachedAdaptiveClass = clazz;
-                                                } else if (! cachedAdaptiveClass.equals(clazz)) {
+                                                } else if (! cachedAdaptiveClass.equals(clazz)) {// 只能有一个适配类，其实搞太多适配类也没有半毛钱用处啊
                                                     throw new IllegalStateException("More than 1 adaptive class found: "
                                                             + cachedAdaptiveClass.getClass().getName()
                                                             + ", " + clazz.getClass().getName());
                                                 }
                                             } else {
                                                 try {
+                                                    //判断有没有拷贝构造函数，如果有的话就进行Wrapper包装
                                                     clazz.getConstructor(type);
                                                     Set<Class<?>> wrappers = cachedWrapperClasses;
                                                     if (wrappers == null) {

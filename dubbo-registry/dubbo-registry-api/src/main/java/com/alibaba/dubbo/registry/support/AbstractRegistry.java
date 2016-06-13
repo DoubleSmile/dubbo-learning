@@ -80,9 +80,9 @@ public abstract class AbstractRegistry implements Registry {
     private final boolean syncSaveFile ;
     
     private final AtomicLong lastCacheChanged = new AtomicLong();
-
+    //已经注册的服务列表
     private final Set<URL> registered = new ConcurrentHashSet<URL>();
-
+    //服务消费者-变更通知的映射，一个服务消费者对应多个变更通知的监听器
     private final ConcurrentMap<URL, Set<NotifyListener>> subscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
 
     private final ConcurrentMap<URL, Map<String, List<URL>>> notified = new ConcurrentHashMap<URL, Map<String, List<URL>>>();
@@ -101,8 +101,8 @@ public abstract class AbstractRegistry implements Registry {
                 }
             }
         }
-        this.file = file;
-        loadProperties();
+        this.file = file;//创建文件
+        loadProperties();//将file的内容读入Properties列表
         notify(url.getBackupUrls());
     }
 

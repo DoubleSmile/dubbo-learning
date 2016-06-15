@@ -59,9 +59,9 @@ import com.alibaba.dubbo.rpc.protocol.AbstractProtocol;
 public class DubboProtocol extends AbstractProtocol {
 
     public static final String NAME = "dubbo";
-
+    //兼容的编码名称(请原谅我英文不好)
     public static final String COMPATIBLE_CODEC_NAME = "dubbo1compatible";
-    
+    //默认端口
     public static final int DEFAULT_PORT = 20880;
     
     public final ReentrantLock lock = new ReentrantLock();

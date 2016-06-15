@@ -71,11 +71,12 @@ public abstract class Proxy
 	 * Get proxy.
 	 * @param cl class loader.
 	 * @param ics interface class array.
-	 * 
+	 * 动态编译了来生成Proxy对象
 	 * @return Proxy instance.
 	 */
 	public static Proxy getProxy(ClassLoader cl, Class<?>... ics)
 	{
+		//对于接口的数量有限制，不能实现太多接口
 		if( ics.length > 65535 )
 			throw new IllegalArgumentException("interface limit exceeded");
 		
@@ -97,14 +98,15 @@ public abstract class Proxy
 			if( tmp != ics[i] )
 				throw new IllegalArgumentException(ics[i] + " is not visible from class loader");
 
-		    sb.append(itf).append(';');
+		    sb.append(itf).append(';');//加载完成后拼接成字符串
 		}
 
-		// use interface class name list as key.
+		//使用接口名称拼接成的字符串作为key
 		String key = sb.toString();
 
-		// get cache by class loader.
+		//从classloader中获得缓存
 		Map<String, Object> cache;
+		//判断ProxyCacheMap中是否存在关于cl的映射对象，如果不存在的话就新加一个进去(但是其实只是一个空的Map)
 		synchronized( ProxyCacheMap )
 		{
 			cache = ProxyCacheMap.get(cl);
@@ -119,20 +121,21 @@ public abstract class Proxy
 		synchronized( cache )
 		{
 			do
-			{
+			{	//ket为接口数组的名字拼成的字符串
 				Object value = cache.get(key);
+				//如果value是引用类型
 				if( value instanceof Reference<?> )
 				{
 					proxy = (Proxy)((Reference<?>)value).get();
-					if( proxy != null )
+					if( proxy != null )//如果已经有映射的话就直接取出proxy对象
 						return proxy;
 				}
-
+				//如果取出的内容是延迟生产者的话就wait
 				if( value == PendingGenerationMarker )
 				{
 					try{ cache.wait(); }catch(InterruptedException e){}
 				}
-				else
+				else//如果既不是引用类型也不是PendingGeneratorMaker的话就把PendingGeneratorMaker放进去然后结束
 				{
 					cache.put(key, PendingGenerationMarker);
 					break;

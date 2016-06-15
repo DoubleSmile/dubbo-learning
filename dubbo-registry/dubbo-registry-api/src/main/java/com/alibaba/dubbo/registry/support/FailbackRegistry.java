@@ -35,7 +35,7 @@ import com.alibaba.dubbo.common.utils.NamedThreadFactory;
 import com.alibaba.dubbo.registry.NotifyListener;
 
 /**
- * FailbackRegistry. (SPI, Prototype, ThreadSafe)
+ * FailbackRegistry(自动恢复注册中心). (SPI, Prototype, ThreadSafe)
  * 
  * @author william.liangf
  */
@@ -43,27 +43,28 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     // 定时任务执行器
     private final ScheduledExecutorService retryExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("DubboRegistryFailedRetryTimer", true));
-
     // 失败重试定时器，定时检查是否有请求失败，如有，无限次重试
     private final ScheduledFuture<?> retryFuture;
-
+    //那些注册失败的URL
     private final Set<URL> failedRegistered = new ConcurrentHashSet<URL>();
-
+    //那些取消注册失败的URL
     private final Set<URL> failedUnregistered = new ConcurrentHashSet<URL>();
-
+    //那些订阅失败的URL
     private final ConcurrentMap<URL, Set<NotifyListener>> failedSubscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
-
+    //那些取消订阅失败的URL
     private final ConcurrentMap<URL, Set<NotifyListener>> failedUnsubscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
-
+    //那些通知失败的URL
     private final ConcurrentMap<URL, Map<NotifyListener, List<URL>>> failedNotified = new ConcurrentHashMap<URL, Map<NotifyListener, List<URL>>>();
 
     public FailbackRegistry(URL url) {
         super(url);
+        //重试的时间间隔
         int retryPeriod = url.getParameter(Constants.REGISTRY_RETRY_PERIOD_KEY, Constants.DEFAULT_REGISTRY_RETRY_PERIOD);
         this.retryFuture = retryExecutor.scheduleWithFixedDelay(new Runnable() {
             public void run() {
                 // 检测并连接注册中心
                 try {
+                    //retry方法的核心就是将上面那些失败的URL都再次重新试一次
                     retry();
                 } catch (Throwable t) { // 防御性容错
                     logger.error("Unexpected error occur at failed retry, cause: " + t.getMessage(), t);
@@ -123,6 +124,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     @Override
     public void register(URL url) {
         super.register(url);
+        //首先尝试从两个失败的列表里面移除这个url，如果该次重试的时候依然失败的话就再次从这里面移出来
         failedRegistered.remove(url);
         failedUnregistered.remove(url);
         try {
@@ -149,7 +151,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             failedRegistered.add(url);
         }
     }
-
+    //该方法与上面的register没啥大区别
     @Override
     public void unregister(URL url) {
         super.unregister(url);
@@ -189,7 +191,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             doSubscribe(url, listener);
         } catch (Exception e) {
             Throwable t = e;
-
+            //注意这里的一个小技巧，如果订阅失败的话(可能是注册中心挂了)可以尝试从缓存中取出服务提供者的列表
             List<URL> urls = getCacheUrls(url);
             if (urls != null && urls.size() > 0) {
                 notify(url, listener, urls);
@@ -302,6 +304,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     // 重试失败的动作
     protected void retry() {
+        //看看有没有注册失败的URL
         if (! failedRegistered.isEmpty()) {
             Set<URL> failed = new HashSet<URL>(failedRegistered);
             if (failed.size() > 0) {
@@ -312,7 +315,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                     for (URL url : failed) {
                         try {
                             doRegister(url);
-                            failedRegistered.remove(url);
+                            failedRegistered.remove(url);//在这里就移除那些已经尝试注册成功的url
                         } catch (Throwable t) { // 忽略所有异常，等待下次重试
                             logger.warn("Failed to retry register " + failed + ", waiting for again, cause: " + t.getMessage(), t);
                         }

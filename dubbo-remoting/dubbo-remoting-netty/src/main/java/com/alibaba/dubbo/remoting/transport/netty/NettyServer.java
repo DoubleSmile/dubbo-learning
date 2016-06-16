@@ -52,41 +52,37 @@ import com.alibaba.dubbo.remoting.transport.dispatcher.ChannelHandlers;
 public class NettyServer extends AbstractServer implements Server {
     
     private static final Logger logger = LoggerFactory.getLogger(NettyServer.class);
-
-    private Map<String, Channel>  channels; // <ip:port, channel>
+    // <ip:port, channel>
+    private Map<String, Channel>  channels;
 
     private ServerBootstrap                 bootstrap;
 
     private org.jboss.netty.channel.Channel channel;
 
     public NettyServer(URL url, ChannelHandler handler) throws RemotingException{
+        //在URL山添加对应的线程名称然后包装handler
         super(url, ChannelHandlers.wrap(handler, ExecutorUtil.setThreadName(url, SERVER_THREAD_POOL_NAME)));
     }
 
     @Override
     protected void doOpen() throws Throwable {
         NettyHelper.setNettyLoggerFactory();
+        //设置线程池
         ExecutorService boss = Executors.newCachedThreadPool(new NamedThreadFactory("NettyServerBoss", true));
         ExecutorService worker = Executors.newCachedThreadPool(new NamedThreadFactory("NettyServerWorker", true));
         ChannelFactory channelFactory = new NioServerSocketChannelFactory(boss, worker, getUrl().getPositiveParameter(Constants.IO_THREADS_KEY, Constants.DEFAULT_IO_THREADS));
-        bootstrap = new ServerBootstrap(channelFactory);
-        
+        bootstrap = new ServerBootstrap(channelFactory); //Netty启动类
+        //定义NettyHandler
         final NettyHandler nettyHandler = new NettyHandler(getUrl(), this);
         channels = nettyHandler.getChannels();
-        // https://issues.jboss.org/browse/NETTY-365
-        // https://issues.jboss.org/browse/NETTY-379
-        // final Timer timer = new HashedWheelTimer(new NamedThreadFactory("NettyIdleTimer", true));
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() {
                 NettyCodecAdapter adapter = new NettyCodecAdapter(getCodec() ,getUrl(), NettyServer.this);
                 ChannelPipeline pipeline = Channels.pipeline();
-                /*int idleTimeout = getIdleTimeout();
-                if (idleTimeout > 10000) {
-                    pipeline.addLast("timer", new IdleStateHandler(timer, idleTimeout / 1000, 0, 0));
-                }*/
-                pipeline.addLast("decoder", adapter.getDecoder());
-                pipeline.addLast("encoder", adapter.getEncoder());
-                pipeline.addLast("handler", nettyHandler);
+
+                pipeline.addLast("decoder", adapter.getDecoder()); //增加解码处理器
+                pipeline.addLast("encoder", adapter.getEncoder()); //增加编码处理器
+                pipeline.addLast("handler", nettyHandler); //增加具体操作的处理器
                 return pipeline;
             }
         });

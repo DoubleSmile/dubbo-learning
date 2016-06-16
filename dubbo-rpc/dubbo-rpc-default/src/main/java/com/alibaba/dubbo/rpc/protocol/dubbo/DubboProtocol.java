@@ -65,10 +65,10 @@ public class DubboProtocol extends AbstractProtocol {
     public static final int DEFAULT_PORT = 20880;
     
     public final ReentrantLock lock = new ReentrantLock();
-    
-    private final Map<String, ExchangeServer> serverMap = new ConcurrentHashMap<String, ExchangeServer>(); // <host:port,Exchanger>
-    
-    private final Map<String, ReferenceCountExchangeClient> referenceClientMap = new ConcurrentHashMap<String, ReferenceCountExchangeClient>(); // <host:port,Exchanger>
+    // <host:port,Exchanger>
+    private final Map<String, ExchangeServer> serverMap = new ConcurrentHashMap<String, ExchangeServer>();
+    // <host:port,Exchanger>
+    private final Map<String, ReferenceCountExchangeClient> referenceClientMap = new ConcurrentHashMap<String, ReferenceCountExchangeClient>();
     
     private final ConcurrentMap<String, LazyConnectExchangeClient> ghostClientMap = new ConcurrentHashMap<String, LazyConnectExchangeClient>();
     
@@ -77,10 +77,11 @@ public class DubboProtocol extends AbstractProtocol {
     private final ConcurrentMap<String, String> stubServiceMethodsMap = new ConcurrentHashMap<String, String>();
     
     private static final String IS_CALLBACK_SERVICE_INVOKE = "_isCallBackServiceInvoke";
-
+    //ExchangeHandler主要用来处理Channel
     private ExchangeHandler requestHandler = new ExchangeHandlerAdapter() {
         
         public Object reply(ExchangeChannel channel, Object message) throws RemotingException {
+            //如果Message是调用请求的话
             if (message instanceof Invocation) {
                 Invocation inv = (Invocation) message;
                 Invoker<?> invoker = getInvoker(channel, inv);
@@ -161,7 +162,7 @@ public class DubboProtocol extends AbstractProtocol {
     };
     
     private static DubboProtocol INSTANCE;
-
+    //难道要在自己的内部搞一个自己的引用？
     public DubboProtocol() {
         INSTANCE = this;
     }
@@ -231,8 +232,10 @@ public class DubboProtocol extends AbstractProtocol {
         URL url = invoker.getUrl();
         
         // export service.
+        //这个key就是可以唯一区分所暴露的服务的key
         String key = serviceKey(url);
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
+        //唯一的服务与exporter映射起来
         exporterMap.put(key, exporter);
         
         //export an stub service for dispaching event
@@ -257,6 +260,7 @@ public class DubboProtocol extends AbstractProtocol {
     
     private void openServer(URL url) {
         // find server.
+        //host:port
         String key = url.getAddress();
         //client 也可以暴露一个只有server可以调用的服务。
         boolean isServer = url.getParameter(Constants.IS_SERVER_KEY,true);
@@ -284,6 +288,8 @@ public class DubboProtocol extends AbstractProtocol {
         url = url.addParameter(Constants.CODEC_KEY, Version.isCompatibleVersion() ? COMPATIBLE_CODEC_NAME : DubboCodec.NAME);
         ExchangeServer server;
         try {
+            //所以重点就在于对于Server的创建上
+            //requestHandler可以理解为对于request的处理器
             server = Exchangers.bind(url, requestHandler);
         } catch (RemotingException e) {
             throw new RpcException("Fail to start server(url: " + url + ") " + e.getMessage(), e);

@@ -45,6 +45,7 @@ public class Transporters {
         } else {
             handler = new ChannelHandlerDispatcher(handlers);
         }
+        //最终还是绑定到特定的Tracnsporter上去
         return getTransporter().bind(url, handler);
     }
 

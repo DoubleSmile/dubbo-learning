@@ -65,10 +65,10 @@ public class MockClusterInvoker<T> implements Invoker<T>{
 
 	public Result invoke(Invocation invocation) throws RpcException {
 		Result result = null;
-        
+        //获取URL中配置的mock参数
         String value = directory.getUrl().getMethodParameter(invocation.getMethodName(), Constants.MOCK_KEY, Boolean.FALSE.toString()).trim(); 
         if (value.length() == 0 || value.equalsIgnoreCase("false")){
-        	//no mock
+        	//如果没有配置mock的话
         	result = this.invoker.invoke(invocation);
         } else if (value.startsWith("force")) {
         	if (logger.isWarnEnabled()) {

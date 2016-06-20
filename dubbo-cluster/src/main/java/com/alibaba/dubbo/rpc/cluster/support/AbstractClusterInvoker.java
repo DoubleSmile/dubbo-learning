@@ -215,8 +215,9 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         checkWheatherDestoried();
 
         LoadBalance loadbalance;
-        
+        //从Directoyr中获得集群后面的Invoker列表
         List<Invoker<T>> invokers = list(invocation);
+        //通过SPI机制加载需要的LoadBalance
         if (invokers != null && invokers.size() > 0) {
             loadbalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(invokers.get(0).getUrl()
                     .getMethodParameter(invocation.getMethodName(),Constants.LOADBALANCE_KEY, Constants.DEFAULT_LOADBALANCE));
@@ -224,6 +225,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             loadbalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(Constants.DEFAULT_LOADBALANCE);
         }
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
+        //调用子类重写的doInvoker()方法
         return doInvoke(invocation, invokers, loadbalance);
     }
 

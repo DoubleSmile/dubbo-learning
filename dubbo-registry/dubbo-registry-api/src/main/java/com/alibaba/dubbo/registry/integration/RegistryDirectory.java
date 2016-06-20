@@ -154,29 +154,33 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     }
 
     public synchronized void notify(List<URL> urls) {
+        //urls : 可能是多种类型的混合列表
         List<URL> invokerUrls = new ArrayList<URL>();
         List<URL> routerUrls = new ArrayList<URL>();
         List<URL> configuratorUrls = new ArrayList<URL>();
         for (URL url : urls) {
-            String protocol = url.getProtocol();
-            String category = url.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY);
-            if (Constants.ROUTERS_CATEGORY.equals(category) 
+            String protocol = url.getProtocol();//协议
+            String category = url.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY);//category类型
+            //如果是路由类型
+            if (Constants.ROUTERS_CATEGORY.equals(category)
                     || Constants.ROUTE_PROTOCOL.equals(protocol)) {
                 routerUrls.add(url);
+            //如果是配置类型
             } else if (Constants.CONFIGURATORS_CATEGORY.equals(category) 
                     || Constants.OVERRIDE_PROTOCOL.equals(protocol)) {
                 configuratorUrls.add(url);
+            //如果是服务提供者的类型
             } else if (Constants.PROVIDERS_CATEGORY.equals(category)) {
                 invokerUrls.add(url);
             } else {
                 logger.warn("Unsupported category " + category + " in notified url: " + url + " from registry " + getUrl().getAddress() + " to consumer " + NetUtils.getLocalHost());
             }
         }
-        // configurators 
+        // 将配置的URL列表转换为confiogurators
         if (configuratorUrls != null && configuratorUrls.size() >0 ){
             this.configurators = toConfigurators(configuratorUrls);
         }
-        // routers
+        // 将URL列表都转换为Router对象
         if (routerUrls != null && routerUrls.size() >0 ){
             List<Router> routers = toRouters(routerUrls);
             if(routers != null){ // null - do nothing
@@ -184,7 +188,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             }
         }
         List<Configurator> localConfigurators = this.configurators; // local reference
-        // 合并override参数
+        // 合并override参数(不清楚override是做什么的)
         this.overrideDirectoryUrl = directoryUrl;
         if (localConfigurators != null && localConfigurators.size() > 0) {
             for (Configurator configurator : localConfigurators) {
@@ -286,6 +290,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             return configurators;
         }
         for(URL url : urls){
+
             if (Constants.EMPTY_PROTOCOL.equals(url.getProtocol())) {
                 configurators.clear();
                 break;
@@ -349,6 +354,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             return newUrlInvokerMap;
         }
         Set<String> keys = new HashSet<String>();
+        //可能有多个协议
         String queryProtocols = this.queryMap.get(Constants.PROTOCOL_KEY);
         for (URL providerUrl : urls) {
         	//如果reference端配置了protocol，则只选择匹配的protocol
@@ -357,6 +363,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         		String[] acceptProtocols = queryProtocols.split(",");
         		for (String acceptProtocol : acceptProtocols) {
         			if (providerUrl.getProtocol().equals(acceptProtocol)) {
+                        //如果提供者的服务协议与可接受的服务协议一致的话
         				accept = true;
         				break;
         			}
@@ -365,6 +372,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         			continue;
         		}
         	}
+            //如果服务提供者的协议为空的话
             if (Constants.EMPTY_PROTOCOL.equals(providerUrl.getProtocol())) {
                 continue;
             }
@@ -376,12 +384,13 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             URL url = mergeUrl(providerUrl);
             
             String key = url.toFullString(); // URL参数是排序的
-            if (keys.contains(key)) { // 重复URL
+            if (keys.contains(key)) { // 重复URL(不需要重复暴露)
                 continue;
             }
             keys.add(key);
             // 缓存key为没有合并消费端参数的URL，不管消费端如何合并参数，如果服务端URL发生变化，则重新refer
             Map<String, Invoker<T>> localUrlInvokerMap = this.urlInvokerMap; // local reference
+            //每个URL都对应一个key值，然后这个key值对应一个Invoker，这种关系保存在缓存Map中
             Invoker<T> invoker = localUrlInvokerMap == null ? null : localUrlInvokerMap.get(key);
             if (invoker == null) { // 缓存中没有，重新refer
                 try {
@@ -657,7 +666,8 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     }
     
     /**
-     * 代理类，主要用于存储注册中心下发的url地址，用于重新重新refer时能够根据providerURL queryMap overrideMap重新组装
+     * 代理类，主要用于存储注册中心下发的url地址，
+     * 用于重新refer时能够根据providerURL queryMap overrideMap重新组装
      * 
      * @author chao.liuc
      *

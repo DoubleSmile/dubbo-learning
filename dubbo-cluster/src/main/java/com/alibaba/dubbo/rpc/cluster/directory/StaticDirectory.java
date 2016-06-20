@@ -54,7 +54,7 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
     public Class<T> getInterface() {
         return invokers.get(0).getInterface();
     }
-
+    //只要有一个invoker可以使用就是可用
     public boolean isAvailable() {
         if (isDestroyed()) {
             return false;

@@ -104,14 +104,6 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 
             if(! ReferenceConfig.this.destroyed) {
                 logger.warn("ReferenceConfig(" + url + ") is not DESTROYED when FINALIZE");
-
-                /* 先不做Destroy操作
-                try {
-                    ReferenceConfig.this.destroy();
-                } catch (Throwable t) {
-                        logger.warn("Unexpected err when destroy invoker of ReferenceConfig(" + url + ") in finalize method!", t);
-                }
-                */
             }
         }
     };
@@ -157,8 +149,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         ref = null;
     }
 
+    //这是消费端进行初始化调用的初始方法
     private void init() {
-	    if (initialized) {
+	    if (initialized) {//如果已经初始化的话就直接返回
 	        return;
 	    }
 	    initialized = true;
@@ -168,6 +161,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
     	// 获取消费者全局配置
     	checkDefault();
         appendProperties(this);
+        //判断是不是通用服务
         if (getGeneric() == null && getConsumer() != null) {
             setGeneric(getConsumer().getGeneric());
         }
@@ -180,6 +174,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 			} catch (ClassNotFoundException e) {
 				throw new IllegalStateException(e.getMessage(), e);
 			}
+            //检查方法在接口中是否存在
             checkInterfaceAndMethods(interfaceClass, methods);
         }
         String resolve = System.getProperty(interfaceName);
@@ -297,6 +292,8 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         }
         //attributes通过系统context进行存储.
         StaticContext.getSystemContext().putAll(attributes);
+        //这里的套路和ServiceConfig里面的套路差不多，都是通过配置文件然后读取一系列属性最终放到一个Map里面
+        //然后重点就是创建这个代理对象
         ref = createProxy(map);
     }
     
@@ -335,6 +332,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
     
 	@SuppressWarnings({ "unchecked", "rawtypes", "deprecation" })
 	private T createProxy(Map<String, String> map) {
+        //根据Map构造URL
 		URL tmpUrl = new URL("temp", "localhost", 0, map);
 		final boolean isJvmRefer;
         if (isInjvm() == null) {
@@ -349,15 +347,18 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         } else {
             isJvmRefer = isInjvm().booleanValue();
         }
-		
+		//如果是本地服务引用的话
 		if (isJvmRefer) {
 			URL url = new URL(Constants.LOCAL_PROTOCOL, NetUtils.LOCALHOST, 0, interfaceClass.getName()).addParameters(map);
-			invoker = refprotocol.refer(interfaceClass, url);
+			//以为这个时候调用的是本地服务，所以这里的Invoker就是一个简单Iovoker，并没有涉及集群的内容
+            invoker = refprotocol.refer(interfaceClass, url);
             if (logger.isInfoEnabled()) {
                 logger.info("Using injvm service " + interfaceClass.getName());
             }
 		} else {
-            if (url != null && url.length() > 0) { // 用户指定URL，指定的URL可能是对点对直连地址，也可能是注册中心URL
+            // 用户指定URL，指定的URL可能是对点对直连地址，也可能是注册中心URL
+            if (url != null && url.length() > 0) {
+                //注册中心可能是多个
                 String[] us = Constants.SEMICOLON_SPLIT_PATTERN.split(url);
                 if (us != null && us.length > 0) {
                     for (String u : us) {
@@ -365,6 +366,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         if (url.getPath() == null || url.getPath().length() == 0) {
                             url = url.setPath(interfaceName);
                         }
+                        //如果用户指定的URL是注册中心的话
                         if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
                             urls.add(url.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                         } else {
@@ -372,10 +374,12 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         }
                     }
                 }
-            } else { // 通过注册中心配置拼装URL
+            } else { // 如果用户没有指定的话就通过注册中心配置拼装URL
+                //得到所有注册中心的地址
             	List<URL> us = loadRegistries(false);
             	if (us != null && us.size() > 0) {
                 	for (URL u : us) {
+                        //这里是一些监控中心的相关操作，因为监控中心对整个调用过程不会有逻辑性的影响，所以我们暂且忽略
                 	    URL monitorUrl = loadMonitor(u);
                         if (monitorUrl != null) {
                             map.put(Constants.MONITOR_KEY, URL.encode(monitorUrl.toFullString()));
@@ -387,13 +391,16 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                     throw new IllegalStateException("No such any registry to reference " + interfaceName  + " on the consumer " + NetUtils.getLocalHost() + " use dubbo version " + Version.getVersion() + ", please config <dubbo:registry address=\"...\" /> to your spring config.");
                 }
             }
-
+            //如果注册中心的地址只有一个的话
             if (urls.size() == 1) {
+                //这个invoker并不是简单的DubboInvoker，而是由RegistryProtocol构建基于目录服务的集群策略Invoker，
+                //这个invoker可以通过目录服务list出真正可调用的远程服务invoker
                 invoker = refprotocol.refer(interfaceClass, urls.get(0));
             } else {
                 List<Invoker<?>> invokers = new ArrayList<Invoker<?>>();
                 URL registryURL = null;
                 for (URL url : urls) {
+                    //这里的invoker和上面提到的一样
                     invokers.add(refprotocol.refer(interfaceClass, url));
                     if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
                         registryURL = url; // 用了最后一个registry url

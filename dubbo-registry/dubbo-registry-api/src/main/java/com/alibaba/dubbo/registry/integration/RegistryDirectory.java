@@ -588,20 +588,25 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             throw new RpcException(RpcException.FORBIDDEN_EXCEPTION, "Forbid consumer " +  NetUtils.getLocalHost() + " access service " + getInterface().getName() + " from registry " + getUrl().getAddress() + " use dubbo version " + Version.getVersion() + ", Please check registry access list (whitelist/blacklist).");
         }
         List<Invoker<T>> invokers = null;
+        // Map<methodName, Invoker> cache service method to invokers mapping.
         Map<String, List<Invoker<T>>> localMethodInvokerMap = this.methodInvokerMap; // local reference
         if (localMethodInvokerMap != null && localMethodInvokerMap.size() > 0) {
             String methodName = RpcUtils.getMethodName(invocation);
             Object[] args = RpcUtils.getArguments(invocation);
+            //如果第一个参数是枚举类型
             if(args != null && args.length > 0 && args[0] != null
                     && (args[0] instanceof String || args[0].getClass().isEnum())) {
                 invokers = localMethodInvokerMap.get(methodName + "." + args[0]); // 可根据第一个参数枚举路由
             }
+            //直接从缓存映射表中获取
             if(invokers == null) {
                 invokers = localMethodInvokerMap.get(methodName);
             }
+            //获得任意匹配的值
             if(invokers == null) {
                 invokers = localMethodInvokerMap.get(Constants.ANY_VALUE);
             }
+            //如果都没有配置的话就取映射表中的最后一项
             if(invokers == null) {
                 Iterator<List<Invoker<T>>> iterator = localMethodInvokerMap.values().iterator();
                 if (iterator.hasNext()) {

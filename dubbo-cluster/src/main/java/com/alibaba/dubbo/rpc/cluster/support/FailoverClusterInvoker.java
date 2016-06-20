@@ -68,13 +68,17 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
         	if (i > 0) {
         		checkWheatherDestoried();
         		copyinvokers = list(invocation);
-        		//重新检查一下
+        		//重新检查一下invoker列表有没有发生变化
         		checkInvokers(copyinvokers, invocation);
         	}
+            //通过loadbalance去选出目标Invoker
+            //这里默认的LoadBalance是RandomLoadBalance，选择时候是根据权重来选择目标的Invoker，当然也可以配置其他的LoadBalance
             Invoker<T> invoker = select(loadbalance, invocation, copyinvokers, invoked);
             invoked.add(invoker);
+            //添加到上下文环境中去
             RpcContext.getContext().setInvokers((List)invoked);
             try {
+                //这里才是最后的调用，使用经过loadbalance选出的invoker去调用
                 Result result = invoker.invoke(invocation);
                 if (le != null && logger.isWarnEnabled()) {
                     logger.warn("Although retry the method " + invocation.getMethodName()

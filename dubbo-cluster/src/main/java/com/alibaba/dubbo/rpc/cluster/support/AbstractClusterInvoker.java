@@ -98,7 +98,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         if (invokers == null || invokers.size() == 0)
             return null;
         String methodName = invocation == null ? "" : invocation.getMethodName();
-        
+        //获得粘性策略的参数，如果配置了粘性策略的话每次调用都会从同一个服务器上调用
         boolean sticky = invokers.get(0).getUrl().getMethodParameter(methodName,Constants.CLUSTER_STICKY_KEY, Constants.DEFAULT_CLUSTER_STICKY) ;
         {
             //ignore overloaded method
@@ -129,12 +129,13 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         if (invokers.size() == 2 && selected != null && selected.size() > 0) {
             return selected.get(0) == invokers.get(0) ? invokers.get(1) : invokers.get(0);
         }
+        //根据权重选出invoker
         Invoker<T> invoker = loadbalance.select(invokers, getUrl(), invocation);
         
         //如果 selected中包含（优先判断） 或者 不可用&&availablecheck=true 则重试.
         if( (selected != null && selected.contains(invoker))
                 ||(!invoker.isAvailable() && getUrl()!=null && availablecheck)){
-            try{
+            try{ //重新选择出一个Invoker
                 Invoker<T> rinvoker = reselect(loadbalance, invocation, invokers, selected, availablecheck);
                 if(rinvoker != null){
                     invoker =  rinvoker;

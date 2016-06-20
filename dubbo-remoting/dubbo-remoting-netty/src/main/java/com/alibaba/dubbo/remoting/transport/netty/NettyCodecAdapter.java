@@ -74,8 +74,10 @@ final class NettyCodecAdapter {
 
         @Override
         protected Object encode(ChannelHandlerContext ctx, Channel ch, Object msg) throws Exception {
+            //分配内存空间
             com.alibaba.dubbo.remoting.buffer.ChannelBuffer buffer =
                 com.alibaba.dubbo.remoting.buffer.ChannelBuffers.dynamicBuffer(1024);
+            //如果存在相关通道就直接获取，否则就新建
             NettyChannel channel = NettyChannel.getOrAddChannel(ch, url, handler);
             try {
             	codec.encode(channel, buffer, msg);

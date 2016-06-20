@@ -90,16 +90,18 @@ final class NettyChannel extends AbstractChannel {
     }
 
     public void send(Object message, boolean sent) throws RemotingException {
-        super.send(message, sent);
+        super.send(message, sent); //调用父类的send方法进行异常判断
         
         boolean success = true;
         int timeout = 0;
         try {
+            //NIO框架通知执行写操作
             ChannelFuture future = channel.write(message);
-            if (sent) {
+            if (sent) {//如果已经发送成功
                 timeout = getUrl().getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
                 success = future.await(timeout);
             }
+            //获得失败原因
             Throwable cause = future.getCause();
             if (cause != null) {
                 throw cause;

@@ -92,8 +92,9 @@ public class DefaultFuture implements ResponseFuture {
             long start = System.currentTimeMillis();
             lock.lock();
             try {
-                while (! isDone()) {
+                while (! isDone()) {//如果没有Response到来的话(也就说明请求没有结束)
                     done.await(timeout, TimeUnit.MILLISECONDS);
+                    //如果已经做完或者请求超时的话就直接break
                     if (isDone() || System.currentTimeMillis() - start > timeout) {
                         break;
                     }

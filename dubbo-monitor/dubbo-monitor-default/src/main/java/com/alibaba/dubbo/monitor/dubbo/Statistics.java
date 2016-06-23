@@ -25,6 +25,7 @@ import com.alibaba.dubbo.monitor.MonitorService;
  * 
  * @author william.liangf
  */
+//需要发往监控中心的统计信息，包括调用次数，响应时间等等
 public class Statistics implements Serializable {
     
     private static final long serialVersionUID = -6921183057683641441L;

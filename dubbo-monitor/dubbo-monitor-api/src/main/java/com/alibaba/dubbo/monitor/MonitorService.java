@@ -68,7 +68,7 @@ public interface MonitorService {
      * 1. 支持调用次数统计：count://host/interface?application=foo&method=foo&provider=10.20.153.11:20880&success=12&failure=2&elapsed=135423423
      * 1.1 host,application,interface,group,version,method 记录监控来源主机，应用，接口，方法信息。
      * 1.2 如果是消费者发送的数据，加上provider地址参数，反之，加上来源consumer地址参数。
-     * 1.3 success,faulure,elapsed 记录距上次采集，调用的成功次数，失败次数，成功调用总耗时，平均时间将用总耗时除以成功次数。
+     * 1.3 success,failure,elapsed 记录距上次采集，调用的成功次数，失败次数，成功调用总耗时，平均时间将用总耗时除以成功次数。
      * 
      * @param statistics
      */

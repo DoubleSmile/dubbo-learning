@@ -42,11 +42,12 @@ import com.alibaba.dubbo.rpc.support.RpcUtils;
  * 
  * @author william.liangf
  */
+//在服务端和消费端同时自激活
 @Activate(group = {Constants.PROVIDER, Constants.CONSUMER})
 public class MonitorFilter implements Filter {
 
     private static final Logger logger = LoggerFactory.getLogger(MonitorFilter.class);
-    
+    //当前并发数<method:count>
     private final ConcurrentMap<String, AtomicInteger> concurrents = new ConcurrentHashMap<String, AtomicInteger>();
     
     private MonitorFactory monitorFactory;
@@ -60,7 +61,7 @@ public class MonitorFilter implements Filter {
         if (invoker.getUrl().hasParameter(Constants.MONITOR_KEY)) {
             RpcContext context = RpcContext.getContext(); // 提供方必须在invoke()之前获取context信息
             long start = System.currentTimeMillis(); // 记录起始时间戮
-            getConcurrent(invoker, invocation).incrementAndGet(); // 并发计数
+            getConcurrent(invoker, invocation).incrementAndGet(); // 并发加
             try {
                 Result result = invoker.invoke(invocation); // 让调用链往下执行
                 collect(invoker, invocation, result, context, start, false);
@@ -69,7 +70,7 @@ public class MonitorFilter implements Filter {
                 collect(invoker, invocation, null, context, start, true);
                 throw e;
             } finally {
-                getConcurrent(invoker, invocation).decrementAndGet(); // 并发计数
+                getConcurrent(invoker, invocation).decrementAndGet(); // 并发减
             }
         } else {
             return invoker.invoke(invocation);
@@ -86,7 +87,7 @@ public class MonitorFilter implements Filter {
             String service = invoker.getInterface().getName(); // 获取服务名称
             String method = RpcUtils.getMethodName(invocation); // 获取方法名
             URL url = invoker.getUrl().getUrlParameter(Constants.MONITOR_KEY);
-            Monitor monitor = monitorFactory.getMonitor(url);
+            Monitor monitor = monitorFactory.getMonitor(url);//默认采DubboMonitor
             int localPort;
             String remoteKey;
             String remoteValue;

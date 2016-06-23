@@ -84,6 +84,7 @@ public class DubboProtocol extends AbstractProtocol {
             //如果Message是调用请求的话
             if (message instanceof Invocation) {
                 Invocation inv = (Invocation) message;
+                //根据exporter领取相关联的invoker
                 Invoker<?> invoker = getInvoker(channel, inv);
                 //如果是callback 需要处理高版本调用低版本的问题
                 if (Boolean.TRUE.toString().equals(inv.getAttachments().get(IS_CALLBACK_SERVICE_INVOKE))){
@@ -193,7 +194,7 @@ public class DubboProtocol extends AbstractProtocol {
                     NetUtils.filterLocalHost(channel.getUrl().getIp())
                     .equals(NetUtils.filterLocalHost(address.getAddress().getHostAddress()));
     }
-    
+    //根据对应的Exporter得到invoker
     Invoker<?> getInvoker(Channel channel, Invocation inv) throws RemotingException{
         boolean isCallBackServiceInvoke = false;
         boolean isStubServiceInvoke = false;

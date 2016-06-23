@@ -64,8 +64,9 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
     }
 
     Response handleRequest(ExchangeChannel channel, Request req) throws RemotingException {
+        //构造Request对应的Response
         Response res = new Response(req.getId(), req.getVersion());
-        if (req.isBroken()) {
+        if (req.isBroken()) {//如果请求本省有问题的话
             Object data = req.getData();
 
             String msg;
@@ -77,10 +78,10 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
 
             return res;
         }
-        // find handler by message class.
+        // 根据massage类型找到对应的Handler
         Object msg = req.getData();
         try {
-            // handle data.
+            // 执行与Exporter交接的最初的Handler
             Object result = handler.reply(channel, msg);
             res.setStatus(Response.OK);
             res.setResult(result);
@@ -157,15 +158,17 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
     }
 
     public void received(Channel channel, Object message) throws RemotingException {
+        //用来判断相应超时的时间戳
         channel.setAttribute(KEY_READ_TIMESTAMP, System.currentTimeMillis());
         ExchangeChannel exchangeChannel = HeaderExchangeChannel.getOrAddChannel(channel);
         try {
             if (message instanceof Request) {
                 // handle request.
                 Request request = (Request) message;
+                //这里不太清楚Event与Request的关系
                 if (request.isEvent()) {
                     handlerEvent(channel, request);
-                } else {
+                } else {//如果请求的双关的
                     if (request.isTwoWay()) {
                         Response response = handleRequest(exchangeChannel, request);
                         channel.send(response);
@@ -173,10 +176,11 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
                         handler.received(exchangeChannel, request.getData());
                     }
                 }
+            //如果是消费端收到服务提供端的数据的话就会收到一个Response
             } else if (message instanceof Response) {
                 handleResponse(channel, (Response) message);
-            } else if (message instanceof String) {
-                if (isClientSide(channel)) {
+            } else if (message instanceof String) { //如果收到的而是telnet命令的话
+                if (isClientSide(channel)) {//如果是Client端的Channel
                     Exception e = new Exception("Dubbo client can not supported string message: " + message + " in channel: " + channel + ", url: " + channel.getUrl());
                     logger.error(e.getMessage(), e);
                 } else {

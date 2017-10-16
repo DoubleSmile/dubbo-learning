@@ -148,6 +148,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
     
     protected synchronized void doExport() {
+        // 在进行doExport操作之前unexported合exported应该都为false
         if (unexported) {
             throw new IllegalStateException("Already unexported!");
         }
@@ -155,7 +156,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             return;
         }
         //所有的暴露服务的逻辑从这里开始
-        exported = true;//设置暴露的exported为true
+        exported = true;
         if (interfaceName == null || interfaceName.length() == 0) {//不提供服务的接口是不可以的
             throw new IllegalStateException("<dubbo:service interface=\"\" /> interface not allow null!");
         }
@@ -192,8 +193,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             if (monitor == null) {
                 monitor = application.getMonitor();
             }
-        }//application中取到的信息会覆盖掉module的信息
-        if (ref instanceof GenericService) { //如果ref是通用服务接口
+        }
+        // 针对泛化接口做单独处理
+        if (ref instanceof GenericService) {
             interfaceClass = GenericService.class;
             if (StringUtils.isEmpty(generic)) {
                 generic = Boolean.TRUE.toString();
@@ -224,6 +226,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
             }
+            // 判断Local类和interfaceClass是否实现了同一个接口
             if(!interfaceClass.isAssignableFrom(localClass)){
                 throw new IllegalStateException("The local implemention class " + localClass.getName() + " not implement interface " + interfaceName);
             }
@@ -247,10 +250,12 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         checkRegistry(); //检查Registry的配置情况
         checkProtocol(); //检查Protocol的配置情况
         appendProperties(this); //将配置的属性绑定到对象
-        checkStubAndMock(interfaceClass); //对这个不是很了解，但也是某种检查操作
+        checkStubAndMock(interfaceClass); //针对Local，Stub和Mock进行校验
         if (path == null || path.length() == 0) {
             path = interfaceName; //如果path没有设置的话就将interfaceName设置为path
         }
+        //上面的操作主要是做一些检验和初始化的操作，没有涉及到具体的暴露服务逻辑
+        // 不过暴露服务的过程其实就是将服务注册到ZK的过程
         doExportUrls();
     }
 

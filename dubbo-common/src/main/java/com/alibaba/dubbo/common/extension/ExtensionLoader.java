@@ -70,32 +70,32 @@ public class ExtensionLoader<T> {
     private static final String DUBBO_INTERNAL_DIRECTORY = DUBBO_DIRECTORY + "internal/";
 
     private static final Pattern NAME_SEPARATOR = Pattern.compile("\\s*[,]+\\s*");
-    
+    //Extension对应的实现类名称-扩展类加载器
     private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<Class<?>, ExtensionLoader<?>>();
-
+    //Extension对应的实现类名称-扩展类实例
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<Class<?>, Object>();
 
-    // ==============================
-
+    //接口的类型
     private final Class<?> type;
 
     private final ExtensionFactory objectFactory;
-
+    //Extension对应的实现类名称-在文件中的与其名称对应的key
     private final ConcurrentMap<Class<?>, String> cachedNames = new ConcurrentHashMap<Class<?>, String>();
-    
+    //Extension对应的文件中的key-具体的实现类
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<Map<String,Class<?>>>();
 
     private final Map<String, Activate> cachedActivates = new ConcurrentHashMap<String, Activate>();
-
+    //Extension对应的适配类
     private volatile Class<?> cachedAdaptiveClass = null;
+
     //每个key对应一个相应的扩展类实现 Holder只是一个装着实现类的容器
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<String, Holder<Object>>();
-
+    //实现类的默认名称
     private String cachedDefaultName;
 
     private final Holder<Object> cachedAdaptiveInstance = new Holder<Object>();
     private volatile Throwable createAdaptiveInstanceError;
-
+    //Extension对应的包装类的全部实例
     private Set<Class<?>> cachedWrapperClasses;
     
     private Map<String, IllegalStateException> exceptions = new ConcurrentHashMap<String, IllegalStateException>();
@@ -199,6 +199,8 @@ public class ExtensionLoader<T> {
     public List<T> getActivateExtension(URL url, String[] values, String group) {
         List<T> exts = new ArrayList<T>();
         List<String> names = values == null ? new ArrayList<String>(0) : Arrays.asList(values);
+
+        //如果这些名称里不高扩去除default的标志(-default)
         if (! names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
             getExtensionClasses();
             for (Map.Entry<String, Activate> entry : cachedActivates.entrySet()) {
@@ -628,6 +630,7 @@ public class ExtensionLoader<T> {
                         try {
                             String line = null;
                             while ((line = reader.readLine()) != null) {
+                                //处理注释内容
                                 final int ci = line.indexOf('#');
                                 if (ci >= 0) line = line.substring(0, ci);
                                 line = line.trim();
@@ -640,7 +643,7 @@ public class ExtensionLoader<T> {
                                             line = line.substring(i + 1).trim();//SPI扩展文件中配置的value  ExtensionLoader是根据key和value同时加载的
                                         }
                                         if (line.length() > 0) {
-                                            //初始化配置的类
+                                            //加载扩展类
                                             Class<?> clazz = Class.forName(line, true, classLoader);
                                             if (! type.isAssignableFrom(clazz)) {
                                                 throw new IllegalStateException("Error when load extension class(interface: " +
@@ -652,14 +655,14 @@ public class ExtensionLoader<T> {
                                                 if(cachedAdaptiveClass == null) {
                                                     //将缓存的AdaptiveClass设置成此类
                                                     cachedAdaptiveClass = clazz;
-                                                } else if (! cachedAdaptiveClass.equals(clazz)) {// 只能有一个适配类，其实搞太多适配类也没有半毛钱用处啊
+                                                } else if (! cachedAdaptiveClass.equals(clazz)) {// 一个接口只能有一个适配类
                                                     throw new IllegalStateException("More than 1 adaptive class found: "
                                                             + cachedAdaptiveClass.getClass().getName()
                                                             + ", " + clazz.getClass().getName());
                                                 }
                                             } else {
                                                 try {
-                                                    //判断有没有拷贝构造函数，如果有的话就进行Wrapper包装
+                                                    //判断有没有拷贝构造函数，如果有的话说明该类是实现的包装类，进行缓存。一个接口可能有多个对应的包装类实现
                                                     clazz.getConstructor(type);
                                                     Set<Class<?>> wrappers = cachedWrapperClasses;
                                                     if (wrappers == null) {
@@ -680,6 +683,7 @@ public class ExtensionLoader<T> {
                                                             }
                                                         }
                                                     }
+                                                    //将配置的key名字根据逗号来区分
                                                     String[] names = NAME_SEPARATOR.split(name);
                                                     if (names != null && names.length > 0) {
                                                         Activate activate = clazz.getAnnotation(Activate.class);

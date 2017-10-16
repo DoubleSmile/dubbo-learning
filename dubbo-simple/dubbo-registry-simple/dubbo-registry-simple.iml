@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module org.jetbrains.idea.maven.project.MavenProjectsManager.isMavenModule="true" type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" inherit-compiler-output="false">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_5" inherit-compiler-output="false">
     <output url="file://$MODULE_DIR$/target/classes" />
     <output-test url="file://$MODULE_DIR$/target/test-classes" />
     <content url="file://$MODULE_DIR$">
@@ -16,10 +16,14 @@
     <orderEntry type="module" module-name="dubbo-config-api" />
     <orderEntry type="module" module-name="dubbo-registry-api" />
     <orderEntry type="module" module-name="dubbo-cluster" />
+    <orderEntry type="module" module-name="dubbo-rpc-api" />
+    <orderEntry type="module" module-name="dubbo-container-api" />
     <orderEntry type="module" module-name="dubbo-monitor-api" />
     <orderEntry type="module" module-name="dubbo-remoting-api" />
+    <orderEntry type="module" module-name="dubbo-common" />
     <orderEntry type="module" module-name="dubbo-filter-validation" />
     <orderEntry type="module" module-name="dubbo-filter-cache" />
+    <orderEntry type="module" module-name="dubbo-rpc-injvm" />
     <orderEntry type="module" module-name="dubbo-config-spring" />
     <orderEntry type="library" name="Maven: org.springframework:spring:2.5.6.SEC03" level="project" />
     <orderEntry type="library" name="Maven: commons-logging:commons-logging:1.1.1" level="project" />
@@ -29,14 +33,10 @@
     <orderEntry type="module" module-name="dubbo-remoting-grizzly" />
     <orderEntry type="module" module-name="dubbo-remoting-p2p" />
     <orderEntry type="module" module-name="dubbo-remoting-http" />
-    <orderEntry type="module" module-name="dubbo-common" />
     <orderEntry type="library" name="Maven: log4j:log4j:1.2.16" level="project" />
     <orderEntry type="library" name="Maven: org.javassist:javassist:3.20.0-GA" level="project" />
     <orderEntry type="module" module-name="hessian-lite" />
     <orderEntry type="module" module-name="dubbo-rpc-default" />
-    <orderEntry type="module" module-name="dubbo-rpc-api" />
-    <orderEntry type="module" module-name="dubbo-container-api" />
-    <orderEntry type="module" module-name="dubbo-rpc-injvm" />
     <orderEntry type="module" module-name="dubbo-rpc-rmi" />
     <orderEntry type="module" module-name="dubbo-rpc-hessian" />
     <orderEntry type="module" module-name="dubbo-rpc-http" />

@@ -16,6 +16,23 @@ target/
 *.ipr
 *.iml
 *.iws
+dubbo-admin/*.iml
+dubbo-cluster/*.iml
+dubbo-common/*.iml
+dubbo-config/*.iml
+dubbo-container/*.iml
+dubbo-demo/*.iml
+dubbo-filter/*.iml
+dubbo-maven/*.iml
+dubbo-monitor/*.iml
+dubbo-registry/*.iml
+dubbo-remoting/*.iml
+dubbo-rpc/*.iml
+dubbo-simple/*.iml
+dubbo-test/*.iml
+dubbo-lite/*.iml
+
+
 
 # temp ignore
 *.log

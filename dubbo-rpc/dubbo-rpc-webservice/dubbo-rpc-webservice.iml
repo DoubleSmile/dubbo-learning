@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module org.jetbrains.idea.maven.project.MavenProjectsManager.isMavenModule="true" type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" inherit-compiler-output="false">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_5" inherit-compiler-output="false">
     <output url="file://$MODULE_DIR$/target/classes" />
     <output-test url="file://$MODULE_DIR$/target/test-classes" />
     <content url="file://$MODULE_DIR$">
@@ -27,7 +27,7 @@
     <orderEntry type="library" name="Maven: org.apache.geronimo.specs:geronimo-javamail_1.4_spec:1.7.1" level="project" />
     <orderEntry type="library" name="Maven: wsdl4j:wsdl4j:1.6.2" level="project" />
     <orderEntry type="library" name="Maven: org.apache.cxf:cxf-rt-core:2.6.1" level="project" />
-    <orderEntry type="library" name="Maven: com.sun.xml.bind:jaxb-impl:2.2.5" level="project" />
+    <orderEntry type="library" name="Maven: com.sun.xml.bind:jaxb-impl:2.1.13" level="project" />
     <orderEntry type="library" name="Maven: org.apache.cxf:cxf-rt-bindings-soap:2.6.1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.cxf:cxf-rt-databinding-jaxb:2.6.1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.cxf:cxf-rt-transports-http:2.6.1" level="project" />

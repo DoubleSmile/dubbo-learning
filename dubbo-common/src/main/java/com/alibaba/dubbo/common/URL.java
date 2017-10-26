@@ -170,7 +170,7 @@ public final class URL implements Serializable {
 
     /**
      * Parse url string
-     * 
+     * 切割的方式为逐步切割，顺序依次为:parameter->protocol->path->username/password->port->host
      * @param url URL string
      * @return URL instance
      * @see URL
@@ -188,6 +188,7 @@ public final class URL implements Serializable {
         Map<String, String> parameters = null;
         int i = url.indexOf("?"); // seperator between body and parameters 
         if (i >= 0) {
+            // 分割参数
             String[] parts = url.substring(i + 1).split("\\&");
             parameters = new HashMap<String, String>();
             for (String part : parts) {
@@ -197,6 +198,7 @@ public final class URL implements Serializable {
                     if (j >= 0) {
                         parameters.put(part.substring(0, j), part.substring(j + 1));
                     } else {
+                        // parameter如果是只有一个单词的话，该单词就同时作为key和value存储在URL中
                         parameters.put(part, part);
                     }
                 }
@@ -326,6 +328,12 @@ public final class URL implements Serializable {
         return urls;
 	}
 
+    /**
+     * 将默认的端口号追加到地址后面（如果address没有端口号或者端口号配置为0）
+     * @param address
+     * @param defaultPort
+     * @return
+     */
     private String appendDefaultPort(String address, int defaultPort) {
         if (address != null && address.length() > 0
         		&& defaultPort > 0) {
@@ -363,6 +371,7 @@ public final class URL implements Serializable {
     }
     
     public URL setAddress(String address) {
+        // 因为前面可能有用户名和密码也是用了:
         int i = address.lastIndexOf(':');
         String host;
         int port = this.port;
@@ -394,11 +403,17 @@ public final class URL implements Serializable {
     public String getParameterAndDecoded(String key) {
         return getParameterAndDecoded(key, null);
     }
-    
+
+    // 这里使用了decode方法应该是考虑了中文参数
     public String getParameterAndDecoded(String key, String defaultValue) {
         return decode(getParameter(key, defaultValue));
     }
 
+    /**
+     * 根据key从parameter中取出对应的参数值，如果取不到就取默认的值
+     * @param key
+     * @return
+     */
     public String getParameter(String key) {
         String value = parameters.get(key);
         if (value == null || value.length() == 0) {
@@ -422,7 +437,11 @@ public final class URL implements Serializable {
         }
         return Constants.COMMA_SPLIT_PATTERN.split(value);
     }
-    
+
+    /**
+     * 通过Number作为基本类型的父类，存储一些为数字类型的parameter值
+     * @return
+     */
     private Map<String, Number> getNumbers() {
         if (numbers == null) { // 允许并发重复创建
             numbers = new ConcurrentHashMap<String, Number>();
@@ -437,6 +456,11 @@ public final class URL implements Serializable {
         return urls;
     }
 
+    /**
+     * 存在某个key对应的值是个URL的情况（可以理解为URL嵌套）
+     * @param key
+     * @return
+     */
     public URL getUrlParameter(String key) {
         URL u = getUrls().get(key);
         if (u != null) {
@@ -915,6 +939,7 @@ public final class URL implements Serializable {
 
         Map<String, String> map = new HashMap<String, String>(getParameters());
         map.put(key, value);
+        // 因为URL类中不存在直接替换parameters的set方法，所以只能重新生成URL
         return new URL(protocol, username, password, host, port, path, map);
     }
     
@@ -1011,6 +1036,7 @@ public final class URL implements Serializable {
         for (String key : keys) {
             map.remove(key);
         }
+        // 多一步判断就避免了当key没有命中时候多new了一个无用对象，节省了内存空间
         if (map.size() == getParameters().size()) {
             return this;
         }
@@ -1039,8 +1065,9 @@ public final class URL implements Serializable {
 
     public Map<String, String> toMap() {
         Map<String, String> map = new HashMap<String, String>(parameters);
-        if (protocol != null)
+        if (protocol != null) {
             map.put("protocol", protocol);
+        }
         if (username != null)
             map.put("username", username);
         if (password != null)
@@ -1054,7 +1081,8 @@ public final class URL implements Serializable {
         return map;
     }
 
-	public String toString() {
+	@Override
+    public String toString() {
 	    if (string != null) {
             return string;
         }
@@ -1104,6 +1132,7 @@ public final class URL implements Serializable {
 	    if (getParameters() !=null && getParameters().size() > 0) {
             List<String> includes = (parameters == null || parameters.length == 0 ? null : Arrays.asList(parameters));
             boolean first = true;
+            //这里使用了TreeMap来保证顺序，比HashMap更合适
             for (Map.Entry<String, String> entry : new TreeMap<String, String>(getParameters()).entrySet()) {
                 if (entry.getKey() != null && entry.getKey().length() > 0
                         && (includes == null || includes.contains(entry.getKey()))) {
@@ -1182,6 +1211,7 @@ public final class URL implements Serializable {
         return new InetSocketAddress(host, port);
     }
 
+    // 例如:stable_dev/com.netease.kaola.goods.facade.GoodsDetailServiceFacade:1.0 从这里看出来，group，interface，version确定了唯一的服务
     public String getServiceKey() {
         String inf = getServiceInterface();
         if (inf == null) return null;

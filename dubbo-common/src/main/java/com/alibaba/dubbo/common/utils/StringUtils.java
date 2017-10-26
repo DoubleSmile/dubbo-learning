@@ -406,7 +406,12 @@ public final class StringUtils {
 		}
 		return buf.toString();
 	}
-	
+
+	public static void main(String[] args) {
+		System.out.println(camelToSplitName("getServiceName", "-"));
+	}
+
+
 	public static String camelToSplitName(String camelName, String split) {
 	    if (camelName == null || camelName.length() == 0) {
 	        return camelName;

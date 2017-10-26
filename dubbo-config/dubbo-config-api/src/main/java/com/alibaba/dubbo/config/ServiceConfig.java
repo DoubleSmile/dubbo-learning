@@ -87,7 +87,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     private transient volatile boolean exported;
 
 	private transient volatile boolean unexported;
-    
+
+    // 对应通用的genericService
     private volatile String generic;
 
     public ServiceConfig() {
@@ -97,6 +98,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         appendAnnotation(Service.class, service);
     }
 
+    // 取urls中的第一张URL，不知道为什么
     public URL toUrl() {
         return urls == null || urls.size() == 0 ? null : urls.iterator().next();
     }
@@ -117,8 +119,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     public synchronized void export() {
         if (provider != null) {
+            //默认取provider的配置
             if (export == null) {
-                //export可以理解为是否需要暴露
                 export = provider.getExport();
             }
             if (delay == null) {
@@ -129,7 +131,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if (export != null && ! export.booleanValue()) {
             return;
         }
-        if (delay != null && delay > 0) {//如果设置延迟时间的话就延迟指定时间然后进行暴露
+        //如果设置延迟时间的话就延迟指定时间然后进行暴露
+        if (delay != null && delay > 0) {
             Thread thread = new Thread(new Runnable() {
                 public void run() {
                     try {
@@ -148,10 +151,11 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
     
     protected synchronized void doExport() {
-        // 在进行doExport操作之前unexported合exported应该都为false
+        // 在进行doExport操作之前unexported和exported应该都为false
         if (unexported) {
             throw new IllegalStateException("Already unexported!");
         }
+        // 防止同一个服务多次暴露
         if (exported) {
             return;
         }
@@ -160,7 +164,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if (interfaceName == null || interfaceName.length() == 0) {//不提供服务的接口是不可以的
             throw new IllegalStateException("<dubbo:service interface=\"\" /> interface not allow null!");
         }
-        checkDefault();//检查默认设置，也就是说看看provider有没有设置，provider的属性有没有设置
+        //检查默认设置，也就是说看看provider有没有设置，provider的属性有没有设置
+        checkDefault();
         if (provider != null) {
             if (application == null) {
                 application = provider.getApplication();
@@ -177,7 +182,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             if (protocols == null) {
                 protocols = provider.getProtocols();
             }
-        }//取到Provider的信息并且设置好
+        }
+        //取到Provider的信息并且设置好
         if (module != null) {
             if (registries == null) {
                 registries = module.getRegistries();
@@ -303,11 +309,13 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     private void doExportUrlsFor1Protocol(ProtocolConfig protocolConfig, List<URL> registryURLs) {
         String name = protocolConfig.getName();
-        if (name == null || name.length() == 0) {
-            name = "dubbo"; //默认采用dubbo协议
-        }
 
-        String host = protocolConfig.getHost();//之后的部分逻辑就是想尽一切办法取到host
+        //默认采用dubbo协议
+        if (name == null || name.length() == 0) {
+            name = "dubbo";
+        }
+        //之后的部分逻辑就是想尽一切办法取到host
+        String host = protocolConfig.getHost();
         if (provider != null && (host == null || host.length() == 0)) {
             host = provider.getHost();
         }
@@ -385,7 +393,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             for (MethodConfig method : methods) {
                 //将配置的method参数也设置到map里面
                 appendParameters(map, method, method.getName());
-                //配置.retry属性(目前还不知道将来要干嘛)
+                //配置retry属性
                 String retryKey = method.getName() + ".retry";
                 if (map.containsKey(retryKey)) {
                     String retryValue = map.remove(retryKey);
@@ -449,18 +457,19 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             if (revision != null && revision.length() > 0) {
                 map.put("revision", revision);
             }
-            //通过包装类将interfaceClass进行包装然后取得方法名字
+            //通过包装类将interfaceClass进行包装然后取得方法名字，对于wapper包装器就是将不同的类统一化
+            //参考http://blog.csdn.net/quhongwei_zhanqiu/article/details/41597261理解Wapper
             String[] methods = Wrapper.getWrapper(interfaceClass).getMethodNames();
             if(methods.length == 0) {
                 logger.warn("NO method found in service interface " + interfaceClass.getName());
                 map.put("methods", Constants.ANY_VALUE);
             }
             else {
-                //将方法拼接成字符串
+                //将所有的方法拼接成以逗号为分隔符的字符串
                 map.put("methods", StringUtils.join(new HashSet<String>(Arrays.asList(methods)), ","));
             }
         }
-        //暂时不了接Token是用来干嘛的
+        //处理token属性
         if (! ConfigUtils.isEmpty(token)) {
             if (ConfigUtils.isDefault(token)) {
                 map.put("token", UUID.randomUUID().toString());
@@ -481,7 +490,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         }
         //所有的核心属性最后都成了URL的拼接属性，如果我们还记得map里面拼装了多少属性的话就知道这个URL内容有多丰富
         URL url = new URL(name, host, port, (contextPath == null || contextPath.length() == 0 ? "" : contextPath + "/") + path, map);
-        //这儿也不知道具体含义
+        //10.26号阅读到此位置
         if (ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
                 .hasExtension(url.getProtocol())) {
             url = ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)

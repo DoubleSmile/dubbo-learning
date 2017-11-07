@@ -67,12 +67,12 @@ public class NettyServer extends AbstractServer implements Server {
     @Override
     protected void doOpen() throws Throwable {
         NettyHelper.setNettyLoggerFactory();
-        //设置线程池
+        //设置线程池(但是线程池中的线程都是守护线程，为的就是当JVM退出时候不用考虑守护线程是否已经结束)
         ExecutorService boss = Executors.newCachedThreadPool(new NamedThreadFactory("NettyServerBoss", true));
         ExecutorService worker = Executors.newCachedThreadPool(new NamedThreadFactory("NettyServerWorker", true));
         ChannelFactory channelFactory = new NioServerSocketChannelFactory(boss, worker, getUrl().getPositiveParameter(Constants.IO_THREADS_KEY, Constants.DEFAULT_IO_THREADS));
         bootstrap = new ServerBootstrap(channelFactory); //Netty启动类
-        //定义NettyHandler
+        //定义NettyHandler(这个应该是通用的Handler，只有在服务启动的时候生效一次)
         final NettyHandler nettyHandler = new NettyHandler(getUrl(), this);
         channels = nettyHandler.getChannels();
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {

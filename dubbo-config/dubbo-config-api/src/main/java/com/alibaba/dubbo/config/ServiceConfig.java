@@ -383,6 +383,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             map.put(Constants.PID_KEY, String.valueOf(ConfigUtils.getPid()));
         }
         //将application,module,provider,protocol和service的信息设置到map里面
+        //注意这里的层级关系，是一层层覆盖的 即关系为:ServiceConfig->PrtocolConfig->ProviderConfig->ModuleConfig->ApplicaionConfig
         appendParameters(map, application);
         appendParameters(map, module);
         appendParameters(map, provider, Constants.DEFAULT_KEY);

@@ -39,6 +39,7 @@ import com.alibaba.dubbo.remoting.ChannelHandler;
 @Sharable
 public class NettyHandler extends SimpleChannelHandler {
 
+    // <消费者的地址, channel>
     private final Map<String, Channel> channels = new ConcurrentHashMap<String, Channel>(); // <ip:port, channel>
     
     private final URL url;

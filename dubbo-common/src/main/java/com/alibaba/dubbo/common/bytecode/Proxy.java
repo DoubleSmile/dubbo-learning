@@ -97,8 +97,8 @@ public abstract class Proxy
 
 			if( tmp != ics[i] )
 				throw new IllegalArgumentException(ics[i] + " is not visible from class loader");
-
-		    sb.append(itf).append(';');//加载完成后拼接成字符串
+			//将所有的接口名字拼接成字符串
+		    sb.append(itf).append(';');
 		}
 
 		//使用接口名称拼接成的字符串作为key
@@ -121,7 +121,7 @@ public abstract class Proxy
 		synchronized( cache )
 		{
 			do
-			{	//ket为接口数组的名字拼成的字符串
+			{	//key为接口数组的名字拼成的字符串
 				Object value = cache.get(key);
 				//如果value是引用类型
 				if( value instanceof Reference<?> )

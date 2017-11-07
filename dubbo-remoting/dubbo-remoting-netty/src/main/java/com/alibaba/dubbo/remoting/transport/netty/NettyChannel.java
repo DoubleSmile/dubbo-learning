@@ -54,6 +54,13 @@ final class NettyChannel extends AbstractChannel {
         this.channel = channel;
     }
 
+    /**
+     * 将netty的Channel转换为Dubbo的NettyChannel
+     * @param ch
+     * @param url
+     * @param handler
+     * @return
+     */
     static NettyChannel getOrAddChannel(org.jboss.netty.channel.Channel ch, URL url, ChannelHandler handler) {
         if (ch == null) {
             return null;

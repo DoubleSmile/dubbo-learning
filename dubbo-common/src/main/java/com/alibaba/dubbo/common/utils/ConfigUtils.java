@@ -141,7 +141,7 @@ public class ConfigUtils {
 	
     private static volatile Properties PROPERTIES;
 
-    // 支持自定义的dubbo配置文件
+    // 支持自定义的dubbo配置文件，如果没有配置的话就默认使用dubbo.properties作为默认的配置文件
     public static Properties getProperties() {
         if (PROPERTIES == null) {
             synchronized (ConfigUtils.class) {

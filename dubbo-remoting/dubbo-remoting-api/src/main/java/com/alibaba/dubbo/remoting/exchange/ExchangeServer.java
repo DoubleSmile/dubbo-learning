@@ -28,14 +28,14 @@ import com.alibaba.dubbo.remoting.Server;
 public interface ExchangeServer extends Server {
 
     /**
-     * get channels.
+     * get channels. 获得本机对应的所有的连接的Channel
      * 
      * @return channels
      */
     Collection<ExchangeChannel> getExchangeChannels();
 
     /**
-     * get channel.
+     * get channel. 一个远程的地址就对应了一个Channel
      * 
      * @param remoteAddress
      * @return channel

@@ -104,16 +104,16 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     protected void checkRegistry() {
         // 兼容旧版本
         if (registries == null || registries.size() == 0) {
-                String address = ConfigUtils.getProperty("dubbo.registry.address");
-                if (address != null && address.length() > 0) {
-                    registries = new ArrayList<RegistryConfig>();
-                    String[] as = address.split("\\s*[|]+\\s*");
-                    for (String a : as) {
-                        RegistryConfig registryConfig = new RegistryConfig();
-                        registryConfig.setAddress(a);
-                        registries.add(registryConfig);
-                    }
+            String address = ConfigUtils.getProperty("dubbo.registry.address");
+            if (address != null && address.length() > 0) {
+                registries = new ArrayList<RegistryConfig>();
+                String[] as = address.split("\\s*[|]+\\s*");
+                for (String a : as) {
+                    RegistryConfig registryConfig = new RegistryConfig();
+                    registryConfig.setAddress(a);
+                    registries.add(registryConfig);
                 }
+            }
         }
         if ((registries == null || registries.size() == 0)) {
             throw new IllegalStateException((getClass().getSimpleName().startsWith("Reference") 
@@ -156,7 +156,12 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             }
         }
     }
-    
+
+    /**
+     * 总体来看这一步的操作就是读取配置的registry属性值，然后初始化为对应的URL信息，将protocol设置成registry
+     * @param provider
+     * @return
+     */
     protected List<URL> loadRegistries(boolean provider) {
         checkRegistry();
         List<URL> registryList = new ArrayList<URL>();
@@ -166,6 +171,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                 if (address == null || address.length() == 0) {
                 	address = Constants.ANYHOST_VALUE;
                 }
+                //-D参数的配置优先级高于XML配置的优先级
                 String sysaddress = System.getProperty("dubbo.registry.address");
                 if (sysaddress != null && sysaddress.length() > 0) {
                     address = sysaddress;
@@ -191,6 +197,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                     List<URL> urls = UrlUtils.parseURLs(address, map);
                     for (URL url : urls) {
                         url = url.addParameter(Constants.REGISTRY_KEY, url.getProtocol());
+                        // 将协议设置成registry，这样的话在调用protocol.refer()的时候才会进入到RegistryProtocol中
                         url = url.setProtocol(Constants.REGISTRY_PROTOCOL);
                         if ((provider && url.getParameter(Constants.REGISTER_KEY, true))
                                 || (! provider && url.getParameter(Constants.SUBSCRIBE_KEY, true))) {

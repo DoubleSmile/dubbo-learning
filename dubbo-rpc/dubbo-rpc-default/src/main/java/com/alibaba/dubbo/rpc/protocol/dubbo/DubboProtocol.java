@@ -77,7 +77,7 @@ public class DubboProtocol extends AbstractProtocol {
     private final ConcurrentMap<String, String> stubServiceMethodsMap = new ConcurrentHashMap<String, String>();
     
     private static final String IS_CALLBACK_SERVICE_INVOKE = "_isCallBackServiceInvoke";
-    //ExchangeHandler主要用来处理Channel
+    //这个类是装饰者模式下最底层的ChannelHandler类
     private ExchangeHandler requestHandler = new ExchangeHandlerAdapter() {
         
         public Object reply(ExchangeChannel channel, Object message) throws RemotingException {
@@ -194,7 +194,7 @@ public class DubboProtocol extends AbstractProtocol {
                     NetUtils.filterLocalHost(channel.getUrl().getIp())
                     .equals(NetUtils.filterLocalHost(address.getAddress().getHostAddress()));
     }
-    //根据对应的Exporter得到invoker
+    //根据serviceKey取到对应的Exporter（取到了Exporter也就是取到了Invoker）
     Invoker<?> getInvoker(Channel channel, Invocation inv) throws RemotingException{
         boolean isCallBackServiceInvoke = false;
         boolean isStubServiceInvoke = false;

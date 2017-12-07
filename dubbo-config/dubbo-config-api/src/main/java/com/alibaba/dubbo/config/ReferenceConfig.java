@@ -158,8 +158,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
     	if (interfaceName == null || interfaceName.length() == 0) {
     	    throw new IllegalStateException("<dubbo:reference interface=\"\" /> interface not allow null!");
     	}
-    	// 获取消费者全局配置
+    	// 设置consumer的参数
     	checkDefault();
+    	//设置reference的参数
         appendProperties(this);
         //判断是不是通用服务
         if (getGeneric() == null && getConsumer() != null) {
@@ -246,6 +247,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             }
         }
         checkApplication();
+        //检查stub和mock的配置，这两个都是降级使用的一些配置，具体使用见用户指南
         checkStubAndMock(interfaceClass);
         Map<String, String> map = new HashMap<String, String>();
         Map<Object, Object> attributes = new HashMap<Object, Object>();
@@ -260,7 +262,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             if (revision != null && revision.length() > 0) {
                 map.put("revision", revision);
             }
-
+            //Wrapper已经在ServiceConfig中有介绍过
             String[] methods = Wrapper.getWrapper(interfaceClass).getMethodNames();
             if(methods.length == 0) {
                 logger.warn("NO method found in service interface " + interfaceClass.getName());
@@ -271,11 +273,12 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             }
         }
         map.put(Constants.INTERFACE_KEY, interfaceName);
+        //将application，module，consumer和this中的属性值存储到map中，顺序不能乱，因为涉及到覆盖操作
         appendParameters(map, application);
         appendParameters(map, module);
         appendParameters(map, consumer, Constants.DEFAULT_KEY);
         appendParameters(map, this);
-        String prifix = StringUtils.getServiceKey(map);
+        String prifix = StringUtils.getServiceKey(map); //三要素
         if (methods != null && methods.size() > 0) {
             for (MethodConfig method : methods) {
                 appendParameters(map, method, method.getName());
@@ -296,7 +299,10 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         //然后重点就是创建这个代理对象
         ref = createProxy(map);
     }
-    
+
+    public static void main(String[] args) {
+        System.out.println(System.getProperty("user.home"));
+    }
     private static void checkAndConvertImplicitConfig(MethodConfig method, Map<String,String> map, Map<Object,Object> attributes){
       //check config conflict
         if (Boolean.FALSE.equals(method.isReturn()) && (method.getOnreturn() != null || method.getOnthrow() != null)) {
@@ -339,7 +345,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             if (url != null && url.length() > 0) { //指定URL的情况下，不做本地引用
                 isJvmRefer = false;
             } else if (InjvmProtocol.getInjvmProtocol().isInjvmRefer(tmpUrl)) {
-                //默认情况下如果本地有服务暴露，则引用本地服务.
+                //默认情况下如果本地有服务暴露，则引用本地服务.（比如我自己引用了自己暴露的服务）
                 isJvmRefer = true;
             } else {
                 isJvmRefer = false;
@@ -350,7 +356,8 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 		//如果是本地服务引用的话
 		if (isJvmRefer) {
 			URL url = new URL(Constants.LOCAL_PROTOCOL, NetUtils.LOCALHOST, 0, interfaceClass.getName()).addParameters(map);
-			//以为这个时候调用的是本地服务，所以这里的Invoker就是一个简单Iovoker，并没有涉及集群的内容
+			//因为这个时候调用的是本地服务，所以这里的Invoker就是一个简单Invoker，并没有涉及集群的内容
+            //这时候的refprotocol直接就是InjvmProtocol,鉴于这种情况并不多，所以就不多讲
             invoker = refprotocol.refer(interfaceClass, url);
             if (logger.isInfoEnabled()) {
                 logger.info("Using injvm service " + interfaceClass.getName());
@@ -370,11 +377,12 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
                             urls.add(url.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                         } else {
+                            //合并provider和consumer的配置
                             urls.add(ClusterUtils.mergeUrl(url, map));
                         }
                     }
                 }
-            } else { // 如果用户没有指定的话就通过注册中心配置拼装URL
+            } else { // 如果用户没有指定的话就通过注册中心配置拼装URL（这也是最通用的情况）
                 //得到所有注册中心的地址
             	List<URL> us = loadRegistries(false);
             	if (us != null && us.size() > 0) {
@@ -384,6 +392,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         if (monitorUrl != null) {
                             map.put(Constants.MONITOR_KEY, URL.encode(monitorUrl.toFullString()));
                         }
+                        // 将现在的map属性值转换为URL的编码信息存储到refer对应的value中
                 	    urls.add(u.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                     }
             	}
@@ -391,8 +400,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                     throw new IllegalStateException("No such any registry to reference " + interfaceName  + " on the consumer " + NetUtils.getLocalHost() + " use dubbo version " + Version.getVersion() + ", please config <dubbo:registry address=\"...\" /> to your spring config.");
                 }
             }
-            //如果注册中心的地址只有一个的话
-            if (urls.size() == 1) {
+            //如果注册中心的地址只有一个的话，这时候的URL大致是这样子：
+            // registry://username@:password@127.0.0.1:20880/com.alibaba.dubbo.registry.RegistryService?refer=.(经过编码的key，value键值队集合).&protocol=remote&owner=lvyanfeng&...
+            if (urls.size() == 1) {//只有一个注册中心的话
                 //这个invoker并不是简单的DubboInvoker，而是由RegistryProtocol构建基于目录服务的集群策略Invoker，
                 //这个invoker可以通过目录服务list出真正可调用的远程服务invoker
                 invoker = refprotocol.refer(interfaceClass, urls.get(0));
@@ -437,6 +447,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         if (consumer == null) {
             consumer = new ConsumerConfig();
         }
+        //设置系统的参数
         appendProperties(consumer);
     }
 

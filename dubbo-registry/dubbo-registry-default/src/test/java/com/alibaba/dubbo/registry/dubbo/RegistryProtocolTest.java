@@ -60,6 +60,7 @@ public class RegistryProtocolTest {
 
     @Test
     public void testDefaultPort() {
+        Protocol protocol = ExtensionLoader.getExtensionLoader(Protocol.class).getExtension("dubbo");
         RegistryProtocol registryProtocol = new RegistryProtocol();
         assertEquals(9090, registryProtocol.getDefaultPort());
     }

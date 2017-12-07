@@ -80,13 +80,16 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
     }
 
     public Registry getRegistry(URL url) {
+        //去除refer和export的键值对，因为这些跟注册中心的逻辑并没有关系
     	url = url.setPath(RegistryService.class.getName())
     			.addParameter(Constants.INTERFACE_KEY, RegistryService.class.getName())
     			.removeParameters(Constants.EXPORT_KEY, Constants.REFER_KEY);
+    	//toServiceString只是将URL中的前置部分，包括protocol，username，password，host，port，path转换为String
     	String key = url.toServiceString();
-        // 锁定注册中心获取过程，保证注册中心单一实例
+        // 锁定注册中心获取过程，保证注册中心单一实例（感觉锁的范围有点大，可以考虑优化为双重检索）
         LOCK.lock();
         try {
+            //同一个用户对于同一个注册中心只有对应有一个Registry实例
             Registry registry = REGISTRIES.get(key);
             if (registry != null) {
                 return registry;

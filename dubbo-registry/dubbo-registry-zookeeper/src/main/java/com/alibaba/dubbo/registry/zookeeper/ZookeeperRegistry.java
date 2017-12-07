@@ -58,9 +58,9 @@ public class ZookeeperRegistry extends FailbackRegistry {
     
     public ZookeeperRegistry(URL url, ZookeeperTransporter zookeeperTransporter) {
         super(url);
-        if (url.isAnyHost()) {
+        /*if (url.isAnyHost()) {
     		throw new IllegalStateException("registry address == null");
-    	}
+    	}*/
         String group = url.getParameter(Constants.GROUP_KEY, DEFAULT_ROOT);
         if (! group.startsWith(Constants.PATH_SEPARATOR)) {
             group = Constants.PATH_SEPARATOR + group;
@@ -100,6 +100,55 @@ public class ZookeeperRegistry extends FailbackRegistry {
             throw new RpcException("Failed to register " + url + " to zookeeper " + getUrl() + ", cause: " + e.getMessage(), e);
         }
     }
+//
+//    public static void main(String[] args) {
+//        URL url = URL.valueOf("dubbo://192.168.153.1:20880/com.alibaba.dubbo.demo.bid.BidService?anyhost=true&application=demo-provider&dubbo=2.0.0&generic=false&interface=com.alibaba.dubbo.demo.bid.BidService&methods=throwNPE,bid&optimizer=com.alibaba.dubbo.demo.SerializationOptimizerImpl&organization=dubbox&owner=programmer&pid=3872&serialization=kryo&side=provider&timestamp=1422241023451");
+//        System.out.println(new ZookeeperRegistry(url, new ZookeeperTransporter() {
+//            public ZookeeperClient connect(URL url) {
+//                return new ZookeeperClient() {
+//                    public void create(String path, boolean ephemeral) {
+//
+//                    }
+//
+//                    public void delete(String path) {
+//
+//                    }
+//
+//                    public List<String> getChildren(String path) {
+//                        return null;
+//                    }
+//
+//                    public List<String> addChildListener(String path, ChildListener listener) {
+//                        return null;
+//                    }
+//
+//                    public void removeChildListener(String path, ChildListener listener) {
+//
+//                    }
+//
+//                    public void addStateListener(StateListener listener) {
+//
+//                    }
+//
+//                    public void removeStateListener(StateListener listener) {
+//
+//                    }
+//
+//                    public boolean isConnected() {
+//                        return false;
+//                    }
+//
+//                    public void close() {
+//
+//                    }
+//
+//                    public URL getUrl() {
+//                        return null;
+//                    }
+//                };
+//            }
+//        }).toUrlPath(url));
+//    }
 
     protected void doUnregister(URL url) {
         try {

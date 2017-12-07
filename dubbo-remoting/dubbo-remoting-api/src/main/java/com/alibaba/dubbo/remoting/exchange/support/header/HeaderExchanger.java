@@ -37,6 +37,7 @@ public class HeaderExchanger implements Exchanger {
         return new HeaderExchangeClient(Transporters.connect(url, new DecodeHandler(new HeaderExchangeHandler(handler))));
     }
 
+    //这里用尽了装饰者模式，基本上我们看到的Handler都是层层嵌套的，相当于将一个Handler列表做成一个嵌套的Handler
     public ExchangeServer bind(URL url, ExchangeHandler handler) throws RemotingException {
         return new HeaderExchangeServer(Transporters.bind(url, new DecodeHandler(new HeaderExchangeHandler(handler))));
     }

@@ -26,6 +26,9 @@ import com.alibaba.dubbo.remoting.transport.dispatcher.ChannelEventRunnable;
 import com.alibaba.dubbo.remoting.transport.dispatcher.WrappedChannelHandler;
 import com.alibaba.dubbo.remoting.transport.dispatcher.ChannelEventRunnable.ChannelState;
 
+/**
+ * 只有请求响应消息派发到线程池，其它连接断开事件，心跳等消息，直接在IO线程上执行
+ */
 public class MessageOnlyChannelHandler extends WrappedChannelHandler {
     
     public MessageOnlyChannelHandler(ChannelHandler handler, URL url) {

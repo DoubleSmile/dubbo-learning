@@ -177,6 +177,14 @@ public class RegistryProtocol implements Protocol {
     }
 
     /**
+     * registry://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?
+     * application=demo-provider&dubbo=2.0.0&export=dubbo%3A%2F%2F192.168.153.1%3A20880%2F
+     * com.alibaba.dubbo.demo.bid.BidService%3Fanyhost%3Dtrue%26application%3Ddemo-provider
+     * %26dubbo%3D2.0.0%26generic%3Dfalse%26interface%3Dcom.alibaba.dubbo.demo.bid.BidService%26
+     * methods%3DthrowNPE%2Cbid%26optimizer%3Dcom.alibaba.dubbo.demo.SerializationOptimizerImpl%26
+     * organization%3Ddubbox%26owner%3Dprogrammer%26pid%3D3872%26serialization%3Dkryo%26side%3D
+     * provider%26timestamp%3D1422241023451
+     * &organization=dubbox&owner=programmer&pid=3872&registry=zookeeper&timestamp=1422240274186
      * 根据invoker的地址获取registry实例
      * @param originInvoker
      * @return
@@ -187,6 +195,7 @@ public class RegistryProtocol implements Protocol {
             String protocol = registryUrl.getParameter(Constants.REGISTRY_KEY, Constants.DEFAULT_DIRECTORY);
             registryUrl = registryUrl.setProtocol(protocol).removeParameter(Constants.REGISTRY_KEY);
         }
+        //这时候协议已经变为zookeeper
         return registryFactory.getRegistry(registryUrl);
     }
 
@@ -236,14 +245,15 @@ public class RegistryProtocol implements Protocol {
     
     @SuppressWarnings("unchecked")
 	public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
-        //默认还是采用dubbo协议
+        //设置好protocol后从URL中移除registry对应的值
         url = url.setProtocol(url.getParameter(Constants.REGISTRY_KEY, Constants.DEFAULT_REGISTRY)).removeParameter(Constants.REGISTRY_KEY);
+        // 创建zookeeperRegistry
         Registry registry = registryFactory.getRegistry(url);
-        //判断引用是否是注册中心RegistryService服务，如果是的话旧跳过注册中心
+        //判断引用是否是注册中心RegistryService服务，如果是的话就跳过注册中心
         if (RegistryService.class.equals(type)) {
         	return proxyFactory.getInvoker((T) registry, type, url);
         }
-        //如果不是的话说明是普通服务
+        // 如果不是的话说明是普通服务
         // group="a,b" or group="*"
         Map<String, String> qs = StringUtils.parseQueryString(url.getParameterAndDecoded(Constants.REFER_KEY));
         String group = qs.get(Constants.GROUP_KEY);
@@ -435,5 +445,11 @@ public class RegistryProtocol implements Protocol {
             bounds.remove(key);
             exporter.unexport();
         }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Class clazz = Class.forName("com.alibaba.dubbo.registry.integration.RegistryProtocol");
+        Object obj = clazz.getConstructor(Protocol.class);
+        System.out.println(obj);
     }
 }

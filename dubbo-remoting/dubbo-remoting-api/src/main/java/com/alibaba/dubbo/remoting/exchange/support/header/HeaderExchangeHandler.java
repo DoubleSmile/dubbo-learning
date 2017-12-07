@@ -63,10 +63,11 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         }
     }
 
+    // 个人理解：Exchange主要是处理Request和Response的逻辑，所以这里就是调动底层的方法将Request的处理结果转换为Response
     Response handleRequest(ExchangeChannel channel, Request req) throws RemotingException {
         //构造Request对应的Response
         Response res = new Response(req.getId(), req.getVersion());
-        if (req.isBroken()) {//如果请求本省有问题的话
+        if (req.isBroken()) {//如果请求本身有问题的话
             Object data = req.getData();
 
             String msg;

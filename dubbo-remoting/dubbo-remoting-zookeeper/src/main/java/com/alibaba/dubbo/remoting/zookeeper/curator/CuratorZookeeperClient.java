@@ -36,13 +36,14 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
 				builder = builder.authorization("digest", authority.getBytes());
 			}
 			client = builder.build();
+			//处理Session问题
 			client.getConnectionStateListenable().addListener(new ConnectionStateListener() {
 				public void stateChanged(CuratorFramework client, ConnectionState state) {
-					if (state == ConnectionState.LOST) {
+					if (state == ConnectionState.LOST) {//Session断开
 						CuratorZookeeperClient.this.stateChanged(StateListener.DISCONNECTED);
-					} else if (state == ConnectionState.CONNECTED) {
+					} else if (state == ConnectionState.CONNECTED) {//Session连上
 						CuratorZookeeperClient.this.stateChanged(StateListener.CONNECTED);
-					} else if (state == ConnectionState.RECONNECTED) {
+					} else if (state == ConnectionState.RECONNECTED) {//Session重连
 						CuratorZookeeperClient.this.stateChanged(StateListener.RECONNECTED);
 					}
 				}

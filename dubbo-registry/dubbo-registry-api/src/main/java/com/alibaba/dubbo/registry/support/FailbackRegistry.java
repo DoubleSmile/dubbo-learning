@@ -182,6 +182,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
     }
 
+    // comsumer://127.0.0.1:0/com.netease.kaola.GoodsCompose/+ 之前referUrl的参数 + category=providers,configurators, routers
     @Override
     public void subscribe(URL url, NotifyListener listener) {
         super.subscribe(url, listener);
@@ -274,10 +275,11 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     protected void doNotify(URL url, NotifyListener listener, List<URL> urls) {
     	super.notify(url, listener, urls);
     }
-    
+
+    //Session失效之后的重连操作
     @Override
     protected void recover() throws Exception {
-        // register
+        // 重连时候服务端需要将现在的服务重新注册上去
         Set<URL> recoverRegistered = new HashSet<URL>(getRegistered());
         if (! recoverRegistered.isEmpty()) {
             if (logger.isInfoEnabled()) {

@@ -51,7 +51,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
     private final String        root;
     
     private final Set<String> anyServices = new ConcurrentHashSet<String>();
-
+    //url：consumerUrl
     private final ConcurrentMap<URL, ConcurrentMap<NotifyListener, ChildListener>> zkListeners = new ConcurrentHashMap<URL, ConcurrentMap<NotifyListener, ChildListener>>();
     
     private final ZookeeperClient zkClient;
@@ -67,6 +67,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
         }
         this.root = group;
         zkClient = zookeeperTransporter.connect(url);
+        //主要处理Session失效之后重连的逻辑
         zkClient.addStateListener(new StateListener() {
             public void stateChanged(int state) {
             	if (state == RECONNECTED) {
@@ -195,6 +196,10 @@ public class ZookeeperRegistry extends FailbackRegistry {
                 }
             } else {
                 List<URL> urls = new ArrayList<URL>();
+                //url: omsumer://127.0.0.1:0/com.netease.kaola.compose.ic.service.goods.PublishGoodsQueryCompose/+ 之前referUrl的参数 + category=providers,configurators,routers
+                //dubbo/com.netease.kaola.compose.ic.service.goods.PublishGoodsQueryCompose/providers
+                //dubbo/com.netease.kaola.compose.ic.service.goods.PublishGoodsQueryCompose/configurators
+                //dubbo/com.netease.kaola.compose.ic.service.goods.PublishGoodsQueryCompose/routers
                 for (String path : toCategoriesPath(url)) {
                     ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.get(url);
                     if (listeners == null) {
@@ -210,7 +215,9 @@ public class ZookeeperRegistry extends FailbackRegistry {
                         });
                         zkListener = listeners.get(listener);
                     }
+                    //订阅的时候如果对应的provider还没有创建的话，这里也会直接将对应的providers的path创建好
                     zkClient.create(path, false);
+                    //在path下面添加指定的监听器
                     List<String> children = zkClient.addChildListener(path, zkListener);
                     if (children != null) {
                     	urls.addAll(toUrlsWithEmpty(url, path, children));
@@ -270,6 +277,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
         return toRootDir() + URL.encode(name);
     }
 
+    //根据URL生成对应的Zookeeper下使用的路径： 例如/dubbo/com.netease.kaola.compose.ic.service.goods.PublishGoodsQueryCompose/providers
     private String[] toCategoriesPath(URL url) {
         String[] categroies;
         if (Constants.ANY_VALUE.equals(url.getParameter(Constants.CATEGORY_KEY))) {
@@ -278,6 +286,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
         } else {
             categroies = url.getParameter(Constants.CATEGORY_KEY, new String[] {Constants.DEFAULT_CATEGORY});
         }
+        // categroies=["providers","configurators","routers"]
         String[] paths = new String[categroies.length];
         for (int i = 0; i < categroies.length; i ++) {
             paths[i] = toServicePath(url) + Constants.PATH_SEPARATOR + categroies[i];
@@ -292,7 +301,13 @@ public class ZookeeperRegistry extends FailbackRegistry {
     private String toUrlPath(URL url) {
         return toCategoryPath(url) + Constants.PATH_SEPARATOR + URL.encode(url.toFullString());
     }
-    
+
+    /**
+     * 根据consumerUrl提供的信息获得其匹配的providerUrl，获得了providerUrl就获得了服务端的address，就可以调用了。
+     * @param consumer
+     * @param providers
+     * @return
+     */
     private List<URL> toUrlsWithoutEmpty(URL consumer, List<String> providers) {
     	List<URL> urls = new ArrayList<URL>();
         if (providers != null && providers.size() > 0) {
@@ -309,6 +324,13 @@ public class ZookeeperRegistry extends FailbackRegistry {
         return urls;
     }
 
+    /**
+     * 返回与consumer匹配的provider，并且将consumer的Protocol设置为empty然后一并返回，这样从结果里面就能同时取到consumer和provider信息了
+     * @param consumer
+     * @param path
+     * @param providers
+     * @return
+     */
     private List<URL> toUrlsWithEmpty(URL consumer, String path, List<String> providers) {
         List<URL> urls = toUrlsWithoutEmpty(consumer, providers);
         if (urls == null || urls.isEmpty()) {

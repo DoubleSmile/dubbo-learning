@@ -352,12 +352,13 @@ public class UrlUtils {
         }
     }
 
+    // 判断与消费者URL相匹配的提供者URL
     public static boolean isMatch(URL consumerUrl, URL providerUrl) {
         //消费者订阅的接口
         String consumerInterface = consumerUrl.getServiceInterface();
         //提供者提供的接口
         String providerInterface = providerUrl.getServiceInterface();
-        //如果消费者的就扣既不是通配符*而且提供者和消费者的接口也不相同
+        //如果消费者的接口既不是通配符*而且提供者和消费者的接口也不相同就直接返回false
         if( ! (Constants.ANY_VALUE.equals(consumerInterface) || StringUtils.isEquals(consumerInterface, providerInterface)) ) return false;
         //判断消费者的category和提供者的category是否匹配
         if (! isMatchCategory(providerUrl.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY), 

@@ -76,7 +76,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
     private final Class<T> serviceType; // 构造时初始化，断言不为null
     
-    private final Map<String, String> queryMap; // 构造时初始化，断言不为null
+    private final Map<String, String> queryMap; // 构造时初始化，断言不为null,refer对应的value集合
 
     private final URL directoryUrl; // 构造时初始化，断言不为null，并且总是赋非null值
     
@@ -130,6 +130,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     
     public void subscribe(URL url) {
         setConsumerUrl(url);
+        // comsumer://127.0.0.1:0/com.netease.kaola.GoodsCompose/+ 之前referUrl的参数 + category=providers,configurators, routers
         registry.subscribe(url, this);
     }
 
@@ -154,10 +155,11 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     }
 
     public synchronized void notify(List<URL> urls) {
-        //urls : 可能是多种类型的混合列表
+        //urls : 是多种类型的混合列表
         List<URL> invokerUrls = new ArrayList<URL>();
         List<URL> routerUrls = new ArrayList<URL>();
         List<URL> configuratorUrls = new ArrayList<URL>();
+        //根据category区分不同类型的URL
         for (URL url : urls) {
             String protocol = url.getProtocol();//协议
             String category = url.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY);//category类型
@@ -176,7 +178,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 logger.warn("Unsupported category " + category + " in notified url: " + url + " from registry " + getUrl().getAddress() + " to consumer " + NetUtils.getLocalHost());
             }
         }
-        // 将配置的URL列表转换为confiogurators
+        // 将配置的URL列表转换为configurators
         if (configuratorUrls != null && configuratorUrls.size() >0 ){
             this.configurators = toConfigurators(configuratorUrls);
         }
@@ -188,7 +190,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             }
         }
         List<Configurator> localConfigurators = this.configurators; // local reference
-        // 合并override参数(不清楚override是做什么的)
+        // 合并override参数
         this.overrideDirectoryUrl = directoryUrl;
         if (localConfigurators != null && localConfigurators.size() > 0) {
             for (Configurator configurator : localConfigurators) {
@@ -344,8 +346,6 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
      * 将urls转成invokers,如果url已经被refer过，不再重新引用。
      * 
      * @param urls
-     * @param overrides
-     * @param query
      * @return invokers
      */
     private Map<String, Invoker<T>> toInvokers(List<URL> urls) {
@@ -384,7 +384,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             URL url = mergeUrl(providerUrl);
             
             String key = url.toFullString(); // URL参数是排序的
-            if (keys.contains(key)) { // 重复URL(不需要重复暴露)
+            if (keys.contains(key)) { // 重复URL(不需要重复引用)
                 continue;
             }
             keys.add(key);
@@ -400,6 +400,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 	} else {
                 		enabled = url.getParameter(Constants.ENABLED_KEY, true);
                 	}
+                	//奶奶的，终于看到refer调用了
                 	if (enabled) {
                 		invoker = new InvokerDelegete<T>(protocol.refer(serviceType, url), url, providerUrl);
                 	}
@@ -420,7 +421,6 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     /**
      * 合并url参数 顺序为override > -D >Consumer > Provider
      * @param providerUrl
-     * @param overrides
      * @return
      */
     private URL mergeUrl(URL providerUrl){
@@ -543,7 +543,6 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
      * 检查缓存中的invoker是否需要被destroy
      * 如果url中指定refer.autodestroy=false，则只增加不减少，可能会有refer泄漏，
      * 
-     * @param invokers
      */
     private void destroyUnusedInvokers(Map<String, Invoker<T>> oldUrlInvokerMap, Map<String, Invoker<T>> newUrlInvokerMap) {
         if (newUrlInvokerMap == null || newUrlInvokerMap.size() == 0) {

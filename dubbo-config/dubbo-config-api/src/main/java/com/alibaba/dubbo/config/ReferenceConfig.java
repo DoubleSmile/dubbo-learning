@@ -387,12 +387,12 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             	List<URL> us = loadRegistries(false);
             	if (us != null && us.size() > 0) {
                 	for (URL u : us) {
-                        //这里是一些监控中心的相关操作，因为监控中心对整个调用过程不会有逻辑性的影响，所以我们暂且忽略
+                        //添加注册中心的URL
                 	    URL monitorUrl = loadMonitor(u);
                         if (monitorUrl != null) {
                             map.put(Constants.MONITOR_KEY, URL.encode(monitorUrl.toFullString()));
                         }
-                        // 将现在的map属性值转换为URL的编码信息存储到refer对应的value中
+                        // 添加服务引用的URL
                 	    urls.add(u.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                     }
             	}

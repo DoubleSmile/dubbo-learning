@@ -242,7 +242,8 @@ public class RegistryProtocol implements Protocol {
         String key = providerUrl.removeParameters("dynamic", "enabled").toFullString();
         return key;
     }
-    
+    //type：实际引用的服务
+    //url：registry://username@:password@127.0.0.1:20880/com.alibaba.dubbo.registry.RegistryService?refer=.(经过编码的key，value键值队集合).&protocol=remote&owner=lvyanfeng&...
     @SuppressWarnings("unchecked")
 	public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
         //设置好protocol后从URL中移除registry对应的值
@@ -258,12 +259,13 @@ public class RegistryProtocol implements Protocol {
         Map<String, String> qs = StringUtils.parseQueryString(url.getParameterAndDecoded(Constants.REFER_KEY));
         String group = qs.get(Constants.GROUP_KEY);
         if (group != null && group.length() > 0 ) {
-            //如果group配置了*
+            //如果group配置了*或者group中的内容不止一个分组的话
             if ( ( Constants.COMMA_SPLIT_PATTERN.split( group ) ).length > 1
                     || "*".equals( group ) ) {
                 return doRefer( getMergeableCluster(), registry, type, url );
             }
         }
+        //url：registry://username@:password@127.0.0.1:20880/com.alibaba.dubbo.registry.RegistryService?refer=.(经过编码的key，value键值队集合).&protocol=remote&owner=lvyanfeng&...
         return doRefer(cluster, registry, type, url);
     }
     
@@ -274,23 +276,24 @@ public class RegistryProtocol implements Protocol {
     private <T> Invoker<T> doRefer(Cluster cluster, Registry registry, Class<T> type, URL url) {
         //初始化RegistryDirectory
         RegistryDirectory<T> directory = new RegistryDirectory<T>(type, url);
-        directory.setRegistry(registry);
-        directory.setProtocol(protocol);
+        directory.setRegistry(registry);//ZookeeperRegistry
+        directory.setProtocol(protocol);//DubboProtocol
+        //comsumer://127.0.0.1:0/com.netease.kaola.GoodsCompose/+ 之前referUrl的参数
         URL subscribeUrl = new URL(Constants.CONSUMER_PROTOCOL, NetUtils.getLocalHost(), 0, type.getName(), directory.getUrl().getParameters());
         //如果url的ServiceInterface不等于*并且register=true的话
         if (! Constants.ANY_VALUE.equals(url.getServiceInterface())
                 && url.getParameter(Constants.REGISTER_KEY, true)) {
-            //这里不太清楚为什么要注册一下
+            //如果register设置为true的话表示将consumer也注册到注册中心，主要是用于服务治理
             registry.register(subscribeUrl.addParameters(Constants.CATEGORY_KEY, Constants.CONSUMERS_CATEGORY,
                     Constants.CHECK_KEY, String.valueOf(false)));
         }
         //这里通过directory订阅服务，不过本质上还是通过registry来订阅
-        //在服务第一次订阅的时候会触发通知操作
-        directory.subscribe(subscribeUrl.addParameter(Constants.CATEGORY_KEY, 
+        //在subscribeUrl上增加键值对&category=providers，configurators，routers
+        directory.subscribe(subscribeUrl.addParameter(Constants.CATEGORY_KEY,
                 Constants.PROVIDERS_CATEGORY 
                 + "," + Constants.CONFIGURATORS_CATEGORY 
                 + "," + Constants.ROUTERS_CATEGORY));
-        //使用集群策略去包装一下direcotry
+        //使用集群策略去包装一下directory
         return cluster.join(directory);
     }
 

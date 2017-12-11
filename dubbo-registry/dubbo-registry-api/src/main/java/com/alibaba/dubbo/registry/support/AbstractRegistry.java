@@ -434,7 +434,7 @@ public abstract class AbstractRegistry implements Registry {
                 //取到providerUrl的category
             	String category = u.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY);
             	List<URL> categoryList = result.get(category);
-                //如果对应的列表为空就重新放入一个新的列表进去
+                //根据category区分不同的url
             	if (categoryList == null) {
             		categoryList = new ArrayList<URL>();
             		result.put(category, categoryList);
@@ -459,6 +459,10 @@ public abstract class AbstractRegistry implements Registry {
         }
     }
 
+    /**
+     * 这么做的好处就是，即使zk挂了。本地还是有一份备份数据可以使用
+     * @param url
+     */
     private void saveProperties(URL url) {
         if (file == null) {
             return;
@@ -478,7 +482,7 @@ public abstract class AbstractRegistry implements Registry {
                     }
                 }
             }
-            //写入properties文件
+            //将一个接口对应的所有的category全部存入buf，然后写入properties文件
             properties.setProperty(url.getServiceKey(), buf.toString());
             long version = lastCacheChanged.incrementAndGet();
             //是否同步保存文件

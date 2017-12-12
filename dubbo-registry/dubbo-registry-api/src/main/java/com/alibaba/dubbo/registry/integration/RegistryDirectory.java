@@ -381,6 +381,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                         + ", supported protocol: "+ExtensionLoader.getExtensionLoader(Protocol.class).getSupportedExtensions()));
                 continue;
             }
+            //合并消费者参数
             URL url = mergeUrl(providerUrl);
             
             String key = url.toFullString(); // URL参数是排序的
@@ -392,7 +393,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             Map<String, Invoker<T>> localUrlInvokerMap = this.urlInvokerMap; // local reference
             //每个URL都对应一个key值，然后这个key值对应一个Invoker，这种关系保存在缓存Map中
             Invoker<T> invoker = localUrlInvokerMap == null ? null : localUrlInvokerMap.get(key);
-            if (invoker == null) { // 缓存中没有，重新refer
+            if (invoker == null) { // 缓存中没有，重新refer，缓存命中的话就代表已经refer过了。因为同一个工程里面可以多次引用同一个服务，所以cache还是很有用的
                 try {
                 	boolean enabled = true;
                 	if (url.hasParameter(Constants.DISABLED_KEY)) {
@@ -414,7 +415,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 newUrlInvokerMap.put(key, invoker);
             }
         }
-        keys.clear();
+        keys.clear();//促进垃圾回收
         return newUrlInvokerMap;
     }
     
@@ -471,14 +472,13 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     }
 
     /**
-     * 将invokers列表转成与方法的映射关系
-     * 
+     * 将invokers列表转换为methodName-》List<Invoker>的map存储起来
      * @param invokersMap Invoker列表
      * @return Invoker与方法的映射关系
      */
     private Map<String, List<Invoker<T>>> toMethodInvokers(Map<String, Invoker<T>> invokersMap) {
         Map<String, List<Invoker<T>>> newMethodInvokerMap = new HashMap<String, List<Invoker<T>>>();
-        // 按提供者URL所声明的methods分类，兼容注册中心执行路由过滤掉的methods
+        // 本质上就是将组成method->List<Invoker>组合
         List<Invoker<T>> invokersList = new ArrayList<Invoker<T>>();
         if (invokersMap != null && invokersMap.size() > 0) {
             for (Invoker<T> invoker : invokersMap.values()) {
@@ -502,6 +502,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 invokersList.add(invoker);
             }
         }
+        // 处理*逻辑，*意味这所有方法
         newMethodInvokerMap.put(Constants.ANY_VALUE, invokersList);
         if (serviceMethods != null && serviceMethods.length > 0) {
             for (String method : serviceMethods) {
@@ -509,10 +510,11 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 if (methodInvokers == null || methodInvokers.size() == 0) {
                     methodInvokers = invokersList;
                 }
+                //在映射的时候直接处理路由逻辑
                 newMethodInvokerMap.put(method, route(methodInvokers, method));
             }
         }
-        // sort and unmodifiable
+        //将一个method下对应的Invoker进行排序
         for (String method : new HashSet<String>(newMethodInvokerMap.keySet())) {
             List<Invoker<T>> methodInvokers = newMethodInvokerMap.get(method);
             Collections.sort(methodInvokers, InvokerComparator.getComparator());

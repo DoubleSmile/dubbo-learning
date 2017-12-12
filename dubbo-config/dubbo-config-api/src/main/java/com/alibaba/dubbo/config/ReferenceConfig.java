@@ -383,16 +383,17 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                     }
                 }
             } else { // 如果用户没有指定的话就通过注册中心配置拼装URL（这也是最通用的情况）
-                //得到所有注册中心的地址
+                //得到所有注册中心的URL信息
+                // registry://host:ip/com.alibaba.dubbo.registry.RegistryService?key=value&...
             	List<URL> us = loadRegistries(false);
             	if (us != null && us.size() > 0) {
                 	for (URL u : us) {
-                        //添加注册中心的URL
+                        //添加监控中心的URL
                 	    URL monitorUrl = loadMonitor(u);
                         if (monitorUrl != null) {
                             map.put(Constants.MONITOR_KEY, URL.encode(monitorUrl.toFullString()));
                         }
-                        // 添加服务引用的URL
+                        // 添加服务引用的URL，这里为什么需要Encode，在之前的文章中有描述过
                 	    urls.add(u.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                     }
             	}

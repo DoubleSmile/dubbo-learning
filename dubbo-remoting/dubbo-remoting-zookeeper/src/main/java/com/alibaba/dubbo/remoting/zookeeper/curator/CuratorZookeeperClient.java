@@ -110,7 +110,8 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
 		public void unwatch() {
 			this.listener = null;
 		}
-		
+
+		//将WatcherEvent的事件处理转换为ChildListener的事件处理（解偶操作）
 		public void process(WatchedEvent event) throws Exception {
 			if (listener != null) {
 				listener.childChanged(event.getPath(), client.getChildren().usingWatcher(this).forPath(event.getPath()));

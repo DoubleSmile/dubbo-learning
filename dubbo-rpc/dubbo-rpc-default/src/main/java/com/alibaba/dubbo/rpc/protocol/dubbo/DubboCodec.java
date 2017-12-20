@@ -69,15 +69,15 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
     protected Object decodeBody(Channel channel, InputStream is, byte[] header) throws IOException {
         byte flag = header[2], proto = (byte) (flag & SERIALIZATION_MASK);
         Serialization s = CodecSupport.getSerialization(channel.getUrl(), proto);
-        // get request id.
+        // 获得请求的ID
         long id = Bytes.bytes2long(header, 4);
         if ((flag & FLAG_REQUEST) == 0) {
-            // decode response.
+            // 如果是response类型
             Response res = new Response(id);
             if ((flag & FLAG_EVENT) != 0) {
                 res.setEvent(Response.HEARTBEAT_EVENT);
             }
-            // get status.
+            // 获得状态字段
             byte status = header[3];
             res.setStatus(status);
             if (status == Response.OK) {
@@ -88,6 +88,7 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
                     } else if (res.isEvent()) {
                         data = decodeEventData(channel, deserialize(s, channel.getUrl(), is));
                     } else {
+                        //将原来的RPCResult转换为DecodeableRpcResult，转换后的DecodeableRpcResult里面的data为解码后的结果信息
                         DecodeableRpcResult result;
                         if (channel.getUrl().getParameter(
                             Constants.DECODE_IN_IO_THREAD_KEY,
@@ -168,29 +169,37 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
         return new byte[]{};
     }
 
+    //encode方法因为不不要考虑消息的边界问题，所以比较简单
     @Override
     protected void encodeRequestData(Channel channel, ObjectOutput out, Object data) throws IOException {
+        //序列化消息体（不包含消息头）的实际内容
         RpcInvocation inv = (RpcInvocation) data;
-
+        //dubbo版本信息
         out.writeUTF(inv.getAttachment(Constants.DUBBO_VERSION_KEY, DUBBO_VERSION));
+        //接口名称
         out.writeUTF(inv.getAttachment(Constants.PATH_KEY));
+        //服务版本
         out.writeUTF(inv.getAttachment(Constants.VERSION_KEY));
-
+        //接口方法名称
         out.writeUTF(inv.getMethodName());
+        //参数类型
         out.writeUTF(ReflectUtils.getDesc(inv.getParameterTypes()));
         Object[] args = inv.getArguments();
+        //具体的参数值
         if (args != null)
         for (int i = 0; i < args.length; i++){
             out.writeObject(encodeInvocationArgument(channel, inv, i));
         }
+        //附属信息
         out.writeObject(inv.getAttachments());
     }
 
     @Override
     protected void encodeResponseData(Channel channel, ObjectOutput out, Object data) throws IOException {
         Result result = (Result) data;
-
+        //当出现异常时就只会反序列化异常信息，没有异常的话就直接反序列化返回结果。原则就是：只会取需要的数据
         Throwable th = result.getException();
+        //下面分三种情况，1.异常 2.正常但是没有返回结果 3.正常有返回结果 分别用不同的标记位区分，方便在取数据的时候区分
         if (th == null) {
             Object ret = result.getValue();
             if (ret == null) {

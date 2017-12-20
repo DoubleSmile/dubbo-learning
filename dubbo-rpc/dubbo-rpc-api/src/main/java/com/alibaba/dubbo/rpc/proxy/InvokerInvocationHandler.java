@@ -49,6 +49,7 @@ public class InvokerInvocationHandler implements InvocationHandler {
         if ("equals".equals(methodName) && parameterTypes.length == 1) {
             return invoker.equals(args[0]);
         }
+        //invoke返回的结果是Result类型，recreate表示如果有结果的话就返回真正的调用结果，有异常的话就返回异常信息
         return invoker.invoke(new RpcInvocation(method, args)).recreate();
     }
 

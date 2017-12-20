@@ -83,6 +83,7 @@ public class NettyClient extends AbstractClient {
         });
     }
 
+    // 初始化或者重新覆盖channel
     protected void doConnect() throws Throwable {
         long start = System.currentTimeMillis();
         ChannelFuture future = bootstrap.connect(getConnectAddress());

@@ -101,55 +101,58 @@ public class ZookeeperRegistry extends FailbackRegistry {
             throw new RpcException("Failed to register " + url + " to zookeeper " + getUrl() + ", cause: " + e.getMessage(), e);
         }
     }
-//
-//    public static void main(String[] args) {
-//        URL url = URL.valueOf("dubbo://192.168.153.1:20880/com.alibaba.dubbo.demo.bid.BidService?anyhost=true&application=demo-provider&dubbo=2.0.0&generic=false&interface=com.alibaba.dubbo.demo.bid.BidService&methods=throwNPE,bid&optimizer=com.alibaba.dubbo.demo.SerializationOptimizerImpl&organization=dubbox&owner=programmer&pid=3872&serialization=kryo&side=provider&timestamp=1422241023451");
-//        System.out.println(new ZookeeperRegistry(url, new ZookeeperTransporter() {
-//            public ZookeeperClient connect(URL url) {
-//                return new ZookeeperClient() {
-//                    public void create(String path, boolean ephemeral) {
-//
-//                    }
-//
-//                    public void delete(String path) {
-//
-//                    }
-//
-//                    public List<String> getChildren(String path) {
-//                        return null;
-//                    }
-//
-//                    public List<String> addChildListener(String path, ChildListener listener) {
-//                        return null;
-//                    }
-//
-//                    public void removeChildListener(String path, ChildListener listener) {
-//
-//                    }
-//
-//                    public void addStateListener(StateListener listener) {
-//
-//                    }
-//
-//                    public void removeStateListener(StateListener listener) {
-//
-//                    }
-//
-//                    public boolean isConnected() {
-//                        return false;
-//                    }
-//
-//                    public void close() {
-//
-//                    }
-//
-//                    public URL getUrl() {
-//                        return null;
-//                    }
-//                };
-//            }
-//        }).toUrlPath(url));
-//    }
+
+    public static void main(String[] args) {
+        String url = "dubbo://127.0.0.1:20880/com.netease.kaola.compose.ic.service.goods.GoodsConfigCompose?anyhost=true&application=kaola-goods-front&check=false&default.timeout=3000&" +
+                "environment=test&group=stable_dev&interface=com.netease.kaola.compose.ic.service.goods.GoodsConfigCompose&provider=goods-compose&side=consumer";
+        URL consumerUrl = URL.valueOf(url);
+        String[] lines = new ZookeeperRegistry(consumerUrl, new ZookeeperTransporter() {
+            public ZookeeperClient connect(URL url) {
+                return new ZookeeperClient() {
+                    public void create(String path, boolean ephemeral) {
+
+                    }
+
+                    public void delete(String path) {
+
+                    }
+
+                    public List<String> getChildren(String path) {
+                        return null;
+                    }
+
+                    public List<String> addChildListener(String path, ChildListener listener) {
+                        return null;
+                    }
+
+                    public void removeChildListener(String path, ChildListener listener) {
+
+                    }
+
+                    public void addStateListener(StateListener listener) {
+
+                    }
+
+                    public void removeStateListener(StateListener listener) {
+
+                    }
+
+                    public boolean isConnected() {
+                        return false;
+                    }
+
+                    public void close() {
+
+                    }
+
+                    public URL getUrl() {
+                        return null;
+                    }
+                };
+            }
+        }).toCategoriesPath(consumerUrl);
+        System.out.println(lines);
+    }
 
     protected void doUnregister(URL url) {
         try {
@@ -247,10 +250,10 @@ public class ZookeeperRegistry extends FailbackRegistry {
         try {
             List<String> providers = new ArrayList<String>();
             for (String path : toCategoriesPath(url)) {
-                    List<String> children = zkClient.getChildren(path);
-                    if (children != null) {
-                        providers.addAll(children);
-                    }
+                List<String> children = zkClient.getChildren(path);
+                if (children != null) {
+                    providers.addAll(children);
+                }
             }
             return toUrlsWithoutEmpty(url, providers);
         } catch (Throwable e) {
@@ -293,6 +296,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
         }
         return paths;
     }
+
 
     private String toCategoryPath(URL url) {
         return toServicePath(url) + Constants.PATH_SEPARATOR + url.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY);

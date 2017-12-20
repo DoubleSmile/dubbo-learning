@@ -40,7 +40,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
     
     private final URL url;
     
-//    private final ExchangeHandler handler;
+    private ExchangeHandler handler;
     
     private final AtomicInteger refenceCount = new AtomicInteger(0);
     

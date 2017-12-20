@@ -339,7 +339,7 @@ public class DubboProtocol extends AbstractProtocol {
         //有多少个连接就创建多少个Client
         ExchangeClient[] clients = new ExchangeClient[connections];
         for (int i = 0; i < clients.length; i++) {
-            if (service_share_connect){ //如果是共享连接的话
+            if (service_share_connect){ //如果是共享连接的话(客户端只创建一个Client)
                 clients[i] = getSharedClient(url);
             } else {
                 clients[i] = initClient(url); //这个初始化Client很重要
@@ -354,7 +354,7 @@ public class DubboProtocol extends AbstractProtocol {
      * 提供者的服务时，使用同一个Client来提高通信效率
      */
     private ExchangeClient getSharedClient(URL url){
-        String key = url.getAddress();
+        String key = url.getAddress(); //消费者的地址
         ReferenceCountExchangeClient client = referenceClientMap.get(key);
         if ( client != null ){
             if ( !client.isClosed()){
@@ -363,11 +363,12 @@ public class DubboProtocol extends AbstractProtocol {
                 client.incrementAndGetCount();
                 return client;
             } else {
-                //虽然这个client不为空，但是却没使用这个Client的其他消费者关闭了
+                //虽然这个client不为空，client确实关闭状态的
                 //于是要移除这个被关闭的client
                 referenceClientMap.remove(key);
             }
         }
+        //这个client内部已经建立了与服务端的连接
         ExchangeClient exchagneclient = initClient(url);
         //将client设置为幽灵Client
         //对于共享型Client虽然可以提高通信效率，但会带来一个问题，

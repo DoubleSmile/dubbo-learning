@@ -42,13 +42,16 @@ public final class DubboCountCodec implements Codec2 {
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
         int save = buffer.readerIndex();
         MultiMessage result = MultiMessage.create();
+        //可能由于网络原因，一次接收到比较多的的数据包
         do {
             Object obj = codec.decode(channel, buffer);
+            //如果结果表示为需要更多的数据的话，就将原本保持的readerIndex设置回去，因为在decode的时候可能改变了readerIndex
             if (Codec2.DecodeResult.NEED_MORE_INPUT == obj) {
                 buffer.readerIndex(save);
                 break;
             } else {
                 result.addMessage(obj);
+                //将解码后的结果大小记录到result中
                 logMessageLength(obj, buffer.readerIndex() - save);
                 save = buffer.readerIndex();
             }

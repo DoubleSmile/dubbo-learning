@@ -88,15 +88,17 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
     public Object decode(Channel channel, InputStream input) throws IOException {
         ObjectInput in = CodecSupport.getSerialization(channel.getUrl(), serializationType)
             .deserialize(channel.getUrl(), input);
-
+        //这里的读取顺序不能变，一定要跟编码的顺序保持一致，否则信息将错乱
+        //依次从缓存区读取dubbo版本信息，path和version
         setAttachment(Constants.DUBBO_VERSION_KEY, in.readUTF());
         setAttachment(Constants.PATH_KEY, in.readUTF());
         setAttachment(Constants.VERSION_KEY, in.readUTF());
-
+        //读取dubbo的方法
         setMethodName(in.readUTF());
         try {
             Object[] args;
             Class<?>[] pts;
+            //依次构建方法参数类型即实际方法参数
             String desc = in.readUTF();
             if (desc.length() == 0) {
                 pts = DubboCodec.EMPTY_CLASS_ARRAY;
@@ -116,6 +118,7 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
             }
             setParameterTypes(pts);
 
+            //读取attachments信息并且设置到DecodeableRpcInvocation
             Map<String, String> map = (Map<String, String>) in.readObject(Map.class);
             if (map != null && map.size() > 0) {
                 Map<String, String> attachment = getAttachments();

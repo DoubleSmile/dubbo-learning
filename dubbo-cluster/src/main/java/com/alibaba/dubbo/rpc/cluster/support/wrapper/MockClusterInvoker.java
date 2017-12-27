@@ -68,16 +68,16 @@ public class MockClusterInvoker<T> implements Invoker<T>{
         //获取URL中配置的mock参数
         String value = directory.getUrl().getMethodParameter(invocation.getMethodName(), Constants.MOCK_KEY, Boolean.FALSE.toString()).trim(); 
         if (value.length() == 0 || value.equalsIgnoreCase("false")){
-        	//如果没有配置mock的话
+        	//如果没有配置mock的话就直接进行调用
         	result = this.invoker.invoke(invocation);
+			//如果配置了强制的mock就直接调用mock，不走正常调用逻辑
         } else if (value.startsWith("force")) {
         	if (logger.isWarnEnabled()) {
         		logger.info("force-mock: " + invocation.getMethodName() + " force-mock enabled , url : " +  directory.getUrl());
         	}
-        	//force:direct mock
         	result = doMockInvoke(invocation, null);
         } else {
-        	//fail-mock
+        	//调用失败之后再进行mock操作
         	try {
         		result = this.invoker.invoke(invocation);
         	}catch (RpcException e) {
@@ -98,7 +98,7 @@ public class MockClusterInvoker<T> implements Invoker<T>{
 	private Result doMockInvoke(Invocation invocation,RpcException e){
 		Result result = null;
     	Invoker<T> minvoker ;
-    	
+    	//选取可用的MockInvoker
     	List<Invoker<T>> mockInvokers = selectMockInvoker(invocation);
 		if (mockInvokers == null || mockInvokers.size() == 0){
 			minvoker = (Invoker<T>) new MockInvoker(directory.getUrl());
@@ -108,12 +108,12 @@ public class MockClusterInvoker<T> implements Invoker<T>{
 		try {
 			result = minvoker.invoke(invocation);
 		} catch (RpcException me) {
+			//如果是业务异常就封装结果（注意这里和上面的区别）
 			if (me.isBiz()) {
 				result = new RpcResult(me.getCause());
 			} else {
 				throw new RpcException(me.getCode(), getMockExceptionMessage(e, me), me.getCause());
 			}
-//			
 		} catch (Throwable me) {
 			throw new RpcException(getMockExceptionMessage(e, me), me.getCause());
 		}

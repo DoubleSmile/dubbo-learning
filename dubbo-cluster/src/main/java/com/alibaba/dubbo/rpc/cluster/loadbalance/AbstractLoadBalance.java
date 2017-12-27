@@ -46,7 +46,9 @@ public abstract class AbstractLoadBalance implements LoadBalance {
 	        long timestamp = invoker.getUrl().getParameter(Constants.TIMESTAMP_KEY, 0L);
 	    	if (timestamp > 0L) {
 	    		int uptime = (int) (System.currentTimeMillis() - timestamp);
+                //默认十分钟的warmup时间
 	    		int warmup = invoker.getUrl().getParameter(Constants.WARMUP_KEY, Constants.DEFAULT_WARMUP);
+                //如果服务的提供者开始提供服务的时间到现在位置小于默认的warmup时间（十分钟）
 	    		if (uptime > 0 && uptime < warmup) {
 	    			weight = calculateWarmupWeight(uptime, warmup, weight);
 	    		}
@@ -54,9 +56,11 @@ public abstract class AbstractLoadBalance implements LoadBalance {
         }
     	return weight;
     }
-    
+
+    //核心作用还是希望把warmup期间的服务降低一点权重
     static int calculateWarmupWeight(int uptime, int warmup, int weight) {
     	int ww = (int) ( (float) uptime / ( (float) warmup / (float) weight ) );
+        //为降低权重为什么要这么做？我觉得可以直接将w设置为1
     	return ww < 1 ? 1 : (ww > weight ? weight : ww);
     }
 

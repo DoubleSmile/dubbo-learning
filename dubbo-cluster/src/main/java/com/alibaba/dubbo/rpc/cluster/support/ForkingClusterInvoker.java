@@ -55,6 +55,7 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T>{
         final List<Invoker<T>> selected;
         final int forks = getUrl().getParameter(Constants.FORKS_KEY, Constants.DEFAULT_FORKS);
         final int timeout = getUrl().getParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
+        // forks大于所有可选的invokers的话就直接全部调用
         if (forks <= 0 || forks >= invokers.size()) {
             selected = invokers;
         } else {
@@ -78,6 +79,7 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T>{
                         ref.offer(result);
                     } catch(Throwable e) {
                         int value = count.incrementAndGet();
+                        //如果所有selected到的invoke全部失败的话就将最后一个失败的Invoker的返回异常保存
                         if (value >= selected.size()) {
                             ref.offer(e);
                         }
@@ -87,6 +89,7 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T>{
         }
         try {
             Object ret = ref.poll(timeout, TimeUnit.MILLISECONDS);
+            //如果是异常信息的话说明所有已选的Invoker全部执行失败，则对外抛出RpcException
             if (ret instanceof Throwable) {
                 Throwable e = (Throwable) ret;
                 throw new RpcException(e instanceof RpcException ? ((RpcException)e).getCode() : 0, "Failed to forking invoke provider " + selected + ", but no luck to perform the invocation. Last error is: " + e.getMessage(), e.getCause() != null ? e.getCause() : e);

@@ -216,7 +216,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         checkWheatherDestoried();
 
         LoadBalance loadbalance;
-        //从Directoyr中获得集群后面的Invoker列表
+        //从Directory中获得集群后面的Invoker列表
         List<Invoker<T>> invokers = list(invocation);
         //通过SPI机制加载需要的LoadBalance
         if (invokers != null && invokers.size() > 0) {

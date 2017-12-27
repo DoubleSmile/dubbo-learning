@@ -45,7 +45,7 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(FailbackClusterInvoker.class);
 
-    private static final long RETRY_FAILED_PERIOD = 5 * 1000;
+    private static final long RETRY_FAILED_PERIOD = 5 * 1000; //5s
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2, new NamedThreadFactory("failback-cluster-timer", true));
 
@@ -58,6 +58,7 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
     }
 
     private void addFailed(Invocation invocation, AbstractClusterInvoker<?> router) {
+        // retryFuture这个对象感觉本质上没有其他意义，获得的结果有没有地方取，只是纯粹当作了锁来使用
         if (retryFuture == null) {
             synchronized (this) {
                 if (retryFuture == null) {

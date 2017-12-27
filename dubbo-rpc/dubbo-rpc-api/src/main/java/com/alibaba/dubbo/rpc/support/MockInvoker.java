@@ -62,13 +62,16 @@ final public class MockInvoker<T> implements Invoker<T> {
     	}
     	
     	if (StringUtils.isBlank(mock)){
+            //这个错误比较常见，原因就在于客户端调用的时候返回的异常信息是非业务异常，但是客户端又没有配置mock信息，因此就会抛出这个异常
     		throw new RpcException(new IllegalAccessException("mock can not be null. url :" + url));
     	}
         mock = normallizeMock(URL.decode(mock));
+        //如果配置的是：mock=fail:return,就直接返回空结果
         if (Constants.RETURN_PREFIX.trim().equalsIgnoreCase(mock.trim())){
         	RpcResult result = new RpcResult();
         	result.setValue(null);
         	return result;
+            //如果配置的是mock=fail:return **，就解析**为对应的可返回内容然后返回
         } else if (mock.startsWith(Constants.RETURN_PREFIX)) {
             mock = mock.substring(Constants.RETURN_PREFIX.length()).trim();
             mock = mock.replace('`', '"');
@@ -79,6 +82,7 @@ final public class MockInvoker<T> implements Invoker<T> {
             } catch (Exception ew) {
             	throw new RpcException("mock return invoke error. method :" + invocation.getMethodName() + ", mock:" + mock + ", url: "+ url , ew);
             }
+            //如果配置的是mock=fail:throw **（用户自定义的异常信息），就解析**为对应的可返回内容然后返回
         } else if (mock.startsWith(Constants.THROW_PREFIX)) {
         	mock = mock.substring(Constants.THROW_PREFIX.length()).trim();
             mock = mock.replace('`', '"');
@@ -88,7 +92,7 @@ final public class MockInvoker<T> implements Invoker<T> {
             	Throwable t = getThrowable(mock);
 				throw new RpcException(RpcException.BIZ_EXCEPTION, t);
             }
-        } else { //impl mock
+        } else { //如果mock信息为ServiceMock的话就直接找到对应的Mock类进行mock调用，然后返回结果
              try {
                  Invoker<T> invoker = getInvoker(mock);
                  return invoker.invoke(invocation);
@@ -158,11 +162,13 @@ final public class MockInvoker<T> implements Invoker<T> {
     private String normallizeMock(String mock) {
     	if (mock == null || mock.trim().length() ==0){
     		return mock;
+            //寻找本地Mock类
     	} else if (ConfigUtils.isDefault(mock) || "fail".equalsIgnoreCase(mock.trim()) || "force".equalsIgnoreCase(mock.trim())){
     		mock = url.getServiceInterface()+"Mock";
-    	}
+    	}//mock=fail:throw的时候，返回throw信息
     	if (mock.startsWith(Constants.FAIL_PREFIX)) {
             mock = mock.substring(Constants.FAIL_PREFIX.length()).trim();
+            //mock=force:XX的时候，返回XX信息
         } else if (mock.startsWith(Constants.FORCE_PREFIX)) {
             mock = mock.substring(Constants.FORCE_PREFIX.length()).trim();
         }

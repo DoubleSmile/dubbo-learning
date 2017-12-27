@@ -47,6 +47,7 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
         RpcContext.getContext().setInvokers((List)invokers);
         RpcException exception = null;
         Result result = null;
+        //把所有的Ivoker都调用一遍，然后以最后一个返回结果为最终的返回结果
         for (Invoker<T> invoker: invokers) {
             try {
                 result = invoker.invoke(invocation);

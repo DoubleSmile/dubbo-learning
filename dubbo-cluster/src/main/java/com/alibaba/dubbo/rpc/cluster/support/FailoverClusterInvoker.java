@@ -52,15 +52,17 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public Result doInvoke(Invocation invocation, final List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
     	List<Invoker<T>> copyinvokers = invokers;
+        //检查copyinvokers是否为null
     	checkInvokers(copyinvokers, invocation);
-        //重试次数
+        //重试次数，默认为3次，不包含第一次调用
         int len = getUrl().getMethodParameter(invocation.getMethodName(), Constants.RETRIES_KEY, Constants.DEFAULT_RETRIES) + 1;
         if (len <= 0) {
             len = 1;
         }
-        // retry loop.
-        RpcException le = null; // last exception.
-        List<Invoker<T>> invoked = new ArrayList<Invoker<T>>(copyinvokers.size()); // invoked invokers.
+        // last exception.
+        RpcException le = null;
+        //已经调用的Invoker列表
+        List<Invoker<T>> invoked = new ArrayList<Invoker<T>>(copyinvokers.size());
         Set<String> providers = new HashSet<String>(len);
         for (int i = 0; i < len; i++) {
         	//重试时，进行重新选择，避免重试时invoker列表已发生变化.
@@ -68,14 +70,14 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
         	if (i > 0) {
         		checkWheatherDestoried();
         		copyinvokers = list(invocation);
-        		//重新检查一下invoker列表有没有发生变化
+        		//重新检查一下有没有对应的提供者
         		checkInvokers(copyinvokers, invocation);
         	}
             //通过loadbalance去选出目标Invoker
             //这里默认的LoadBalance是RandomLoadBalance，选择时候是根据权重来选择目标的Invoker，当然也可以配置其他的LoadBalance
             Invoker<T> invoker = select(loadbalance, invocation, copyinvokers, invoked);
             invoked.add(invoker);
-            //添加到上下文环境中去
+            //添加到上下文环境中去，但是这里为什么会把失败的invoker也加进来，感觉失败的Invoker信息并没有什么意义
             RpcContext.getContext().setInvokers((List)invoked);
             try {
                 //这里才是最后的调用，使用经过loadbalance选出的invoker去调用
@@ -93,7 +95,8 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
                 }
                 return result;
             } catch (RpcException e) {
-                if (e.isBiz()) { // biz exception.
+                //业务异常不会重试，直接抛出
+                if (e.isBiz()) {
                     throw e;
                 }
                 le = e;

@@ -57,12 +57,13 @@ public class RoundRobinLoadBalance extends AbstractLoadBalance {
 			this.value--;
 		}
 	}
-
+	//轮训是针对方法级别的，并不是所有服务调用
 	protected <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation) {
 		String key = invokers.get(0).getUrl().getServiceKey() + "." + invocation.getMethodName();
 		int length = invokers.size(); // 总个数
 		int maxWeight = 0; // 最大权重
 		int minWeight = Integer.MAX_VALUE; // 最小权重
+		// invoker->weight
 		final LinkedHashMap<Invoker<T>, IntegerWrapper> invokerToWeightMap = new LinkedHashMap<Invoker<T>, IntegerWrapper>();
 		int weightSum = 0;
 		for (int i = 0; i < length; i++) {
@@ -79,13 +80,17 @@ public class RoundRobinLoadBalance extends AbstractLoadBalance {
 			sequences.putIfAbsent(key, new AtomicPositiveInteger());
 			sequence = sequences.get(key);
 		}
+		//currentSequence代表某个方法是第多少次被调用的，例如第1W次
 		int currentSequence = sequence.getAndIncrement();
 		if (maxWeight > 0 && minWeight < maxWeight) { // 权重不一样
+			// 可以把weightSu理解成一个大圈，mod就代表大圈中具体的轮训数值
 			int mod = currentSequence % weightSum;
+			//weightSum < maxWeight*length
 			for (int i = 0; i < maxWeight; i++) {
 				for (Map.Entry<Invoker<T>, IntegerWrapper> each : invokerToWeightMap.entrySet()) {
 					final Invoker<T> k = each.getKey();
 					final IntegerWrapper v = each.getValue();
+					//这里的逻辑比较抽象，本质上就是谁的权重越大，轮询到谁的次数就越多
 					if (mod == 0 && v.getValue() > 0) {
 						return k;
 					}

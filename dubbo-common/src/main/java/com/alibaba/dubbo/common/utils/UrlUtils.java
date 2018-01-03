@@ -15,14 +15,10 @@
  */
 package com.alibaba.dubbo.common.utils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.URL;
+
+import java.util.*;
 
 public class UrlUtils {
 
@@ -385,18 +381,21 @@ public class UrlUtils {
     }
     
     public static boolean isMatchGlobPattern(String pattern, String value, URL param) {
+        //将$开头的参数饮用替换为实际的参数值
         if (param != null && pattern.startsWith("$")) {
             pattern = param.getRawParameter(pattern.substring(1));
         }
         return isMatchGlobPattern(pattern, value);
     }
-    
+
+    //主要是处理*号通配符逻辑的匹配
     public static boolean isMatchGlobPattern(String pattern, String value) {
         if ("*".equals(pattern))
             return true;
         if((pattern == null || pattern.length() == 0) 
                 && (value == null || value.length() == 0)) 
             return true;
+        //任何一个空的话都直接返回false
         if((pattern == null || pattern.length() == 0) 
                 || (value == null || value.length() == 0)) 
             return false;

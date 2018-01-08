@@ -15,22 +15,16 @@
  */
 package com.alibaba.dubbo.rpc.filter;
 
-import java.lang.reflect.Method;
-
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.extension.Activate;
 import com.alibaba.dubbo.common.logger.Logger;
 import com.alibaba.dubbo.common.logger.LoggerFactory;
 import com.alibaba.dubbo.common.utils.ReflectUtils;
 import com.alibaba.dubbo.common.utils.StringUtils;
-import com.alibaba.dubbo.rpc.Filter;
-import com.alibaba.dubbo.rpc.Invocation;
-import com.alibaba.dubbo.rpc.Invoker;
-import com.alibaba.dubbo.rpc.Result;
-import com.alibaba.dubbo.rpc.RpcContext;
-import com.alibaba.dubbo.rpc.RpcException;
-import com.alibaba.dubbo.rpc.RpcResult;
+import com.alibaba.dubbo.rpc.*;
 import com.alibaba.dubbo.rpc.service.GenericService;
+
+import java.lang.reflect.Method;
 
 /**
  * ExceptionInvokerFilter
@@ -70,7 +64,7 @@ public class ExceptionFilter implements Filter {
                     if (! (exception instanceof RuntimeException) && (exception instanceof Exception)) {
                         return result;
                     }
-                    // 在方法签名上有声明，直接抛出
+                    // 运行时异常，并且在方法签名上有声明，直接抛出
                     try {
                         Method method = invoker.getInterface().getMethod(invocation.getMethodName(), invocation.getParameterTypes());
                         Class<?>[] exceptionClassses = method.getExceptionTypes();

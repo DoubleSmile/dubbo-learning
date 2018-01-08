@@ -15,25 +15,19 @@
  */
 package com.alibaba.dubbo.rpc.protocol.dubbo.filter;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.concurrent.Future;
-
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.extension.Activate;
 import com.alibaba.dubbo.common.logger.Logger;
 import com.alibaba.dubbo.common.logger.LoggerFactory;
 import com.alibaba.dubbo.remoting.exchange.ResponseCallback;
 import com.alibaba.dubbo.remoting.exchange.ResponseFuture;
-import com.alibaba.dubbo.rpc.Filter;
-import com.alibaba.dubbo.rpc.Invocation;
-import com.alibaba.dubbo.rpc.Invoker;
-import com.alibaba.dubbo.rpc.Result;
-import com.alibaba.dubbo.rpc.RpcContext;
-import com.alibaba.dubbo.rpc.RpcException;
-import com.alibaba.dubbo.rpc.StaticContext;
+import com.alibaba.dubbo.rpc.*;
 import com.alibaba.dubbo.rpc.protocol.dubbo.FutureAdapter;
 import com.alibaba.dubbo.rpc.support.RpcUtils;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.concurrent.Future;
 
 /**
  * EventFilter
@@ -47,7 +41,7 @@ public class FutureFilter implements Filter {
 
     public Result invoke(final Invoker<?> invoker, final Invocation invocation) throws RpcException {
     	final boolean isAsync = RpcUtils.isAsync(invoker.getUrl(), invocation);
-        
+        // 这里主要处理回调逻辑，主要区分三个时间：oninvoke：调用前触发，onreturn：调用后触发 onthrow：出现异常情况时候触发
     	fireInvokeCallback(invoker, invocation);
         //需要在调用前配置好是否有返回值，已供invoker判断是否需要返回future.
         Result result = invoker.invoke(invocation);
@@ -106,10 +100,11 @@ public class FutureFilter implements Filter {
         if (onInvokeMethod == null  ||  onInvokeInst == null ){
             throw new IllegalStateException("service:" + invoker.getUrl().getServiceKey() +" has a onreturn callback config , but no such "+(onInvokeMethod == null ? "method" : "instance")+" found. url:"+invoker.getUrl());
         }
+        //由于JDK的安全检查耗时较多.所以通过setAccessible(true)的方式关闭安全检查就可以达到提升反射速度的目的
         if (onInvokeMethod != null && ! onInvokeMethod.isAccessible()) {
             onInvokeMethod.setAccessible(true);
         }
-        
+        //从之类可以看出oninvoke的方法参数要与调用的方法参数一致
         Object[] params = invocation.getArguments();
         try {
             onInvokeMethod.invoke(onInvokeInst, params);
@@ -119,12 +114,12 @@ public class FutureFilter implements Filter {
             fireThrowCallback(invoker, invocation, e);
         }
     }
-    
+
+    //代码解析见fireThrowCallback
     private void fireReturnCallback(final Invoker<?> invoker, final Invocation invocation, final Object result) {
         final Method onReturnMethod = (Method)StaticContext.getSystemContext().get(StaticContext.getKey(invoker.getUrl(), invocation.getMethodName(), Constants.ON_RETURN_METHOD_KEY));
         final Object onReturnInst = StaticContext.getSystemContext().get(StaticContext.getKey(invoker.getUrl(), invocation.getMethodName(), Constants.ON_RETURN_INSTANCE_KEY));
 
-        //not set onreturn callback
         if (onReturnMethod == null  &&  onReturnInst == null ){
             return ;
         }
@@ -165,7 +160,6 @@ public class FutureFilter implements Filter {
         final Method onthrowMethod = (Method)StaticContext.getSystemContext().get(StaticContext.getKey(invoker.getUrl(), invocation.getMethodName(), Constants.ON_THROW_METHOD_KEY));
         final Object onthrowInst = StaticContext.getSystemContext().get(StaticContext.getKey(invoker.getUrl(), invocation.getMethodName(), Constants.ON_THROW_INSTANCE_KEY));
 
-        //没有设置onthrow callback.
         if (onthrowMethod == null  &&  onthrowInst == null ){
             return ;
         }
@@ -178,20 +172,22 @@ public class FutureFilter implements Filter {
         Class<?>[] rParaTypes = onthrowMethod.getParameterTypes() ;
         if (rParaTypes[0].isAssignableFrom(exception.getClass())){
             try {
+                //因为onthrow方法的参数第一个值必须为异常信息，所以这里需要构造参数列表
                 Object[] args = invocation.getArguments();
                 Object[] params;
                 
                 if (rParaTypes.length >1 ) {
+                    //原调用方法只有一个参数而且这个参数是数组（单独拎出来计算的好处是这样可以少复制一个数组）
                     if (rParaTypes.length == 2 && rParaTypes[1].isAssignableFrom(Object[].class)){
                         params = new Object[2];
                         params[0] = exception;
                         params[1] = args ;
-                    }else {
+                    }else {//原调用方法有多于一个参数
                         params = new Object[args.length + 1];
                         params[0] = exception;
                         System.arraycopy(args, 0, params, 1, args.length);
                     }
-                } else {
+                } else {//原调用方法没有参数
                     params = new Object[] { exception };
                 }
                 onthrowMethod.invoke(onthrowInst,params);

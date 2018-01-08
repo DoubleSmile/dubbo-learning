@@ -15,20 +15,6 @@
  */
 package com.alibaba.dubbo.rpc.filter;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.extension.Activate;
 import com.alibaba.dubbo.common.json.JSON;
@@ -37,12 +23,16 @@ import com.alibaba.dubbo.common.logger.LoggerFactory;
 import com.alibaba.dubbo.common.utils.ConcurrentHashSet;
 import com.alibaba.dubbo.common.utils.ConfigUtils;
 import com.alibaba.dubbo.common.utils.NamedThreadFactory;
-import com.alibaba.dubbo.rpc.Filter;
-import com.alibaba.dubbo.rpc.Invocation;
-import com.alibaba.dubbo.rpc.Invoker;
-import com.alibaba.dubbo.rpc.Result;
-import com.alibaba.dubbo.rpc.RpcContext;
-import com.alibaba.dubbo.rpc.RpcException;
+import com.alibaba.dubbo.rpc.*;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.*;
 
 /**
  * 记录Service的Access Log。
@@ -85,6 +75,7 @@ public class AccessLogFilter implements Filter {
             try {
                 if (logQueue != null && logQueue.size() > 0) {
                     for (Map.Entry<String, Set<String>> entry : logQueue.entrySet()) {
+                        //将日志写入文件中，但是不会限制日志的大小，也不支持日志滚动
                         try {
                             String accesslog = entry.getKey();
                             Set<String> logSet = entry.getValue();
@@ -99,6 +90,7 @@ public class AccessLogFilter implements Filter {
                             if (file.exists()) {
                                 String now = new SimpleDateFormat(FILE_DATE_FORMAT).format(new Date());
                                 String last = new SimpleDateFormat(FILE_DATE_FORMAT).format(new Date(file.lastModified()));
+                                //不在同一天的话
                                 if (! now.equals(last)) {
                                     File archive = new File(file.getAbsolutePath() + "." + last);
                                     file.renameTo(archive);
@@ -136,7 +128,7 @@ public class AccessLogFilter implements Filter {
             }
         }
     }
-    
+
     private void log(String accesslog, String logmessage) {
         init();
         Set<String> logSet = logQueue.get(accesslog);
@@ -189,6 +181,7 @@ public class AccessLogFilter implements Filter {
                     sn.append(JSON.json(args));
                 }
                 String msg = sn.toString();
+                //如果只是简单配置accesslog为true的话表示只会通过dubbo内部的logger打印accesslog，但是不会持久化存储
                 if (ConfigUtils.isDefault(accesslog)) {
                     LoggerFactory.getLogger(ACCESS_LOG_KEY + "." + invoker.getInterface().getName()).info(msg);
                 } else {

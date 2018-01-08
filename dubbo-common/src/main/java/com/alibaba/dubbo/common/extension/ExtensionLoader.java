@@ -15,23 +15,6 @@
  */
 package com.alibaba.dubbo.common.extension;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.regex.Pattern;
-
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.common.extension.support.ActivateComparator;
@@ -41,6 +24,15 @@ import com.alibaba.dubbo.common.utils.ConcurrentHashSet;
 import com.alibaba.dubbo.common.utils.ConfigUtils;
 import com.alibaba.dubbo.common.utils.Holder;
 import com.alibaba.dubbo.common.utils.StringUtils;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Pattern;
 
 /**
  * Dubbo使用的扩展点获取。<p>
@@ -198,16 +190,23 @@ public class ExtensionLoader<T> {
      */
     public List<T> getActivateExtension(URL url, String[] values, String group) {
         List<T> exts = new ArrayList<T>();
+        //所有用户自己配置的filter信息
         List<String> names = values == null ? new ArrayList<String>(0) : Arrays.asList(values);
 
-        //如果这些名称里不高扩去除default的标志(-default)
+        //如果这些名称里不包括去除default的标志(-default)
         if (! names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
             getExtensionClasses();
             for (Map.Entry<String, Activate> entry : cachedActivates.entrySet()) {
+                //name指的是SPI读取的配置文件的key
                 String name = entry.getKey();
                 Activate activate = entry.getValue();
+                //group主要是区分实在provider端生效还是consumer端生效
                 if (isMatchGroup(group, activate.group())) {
                     T ext = getExtension(name);
+                    //这里以Filter为例：三个判断条件的含义依次是：
+                    //1.用户配置的filter列表中不包含当前ext
+                    //2.用户配置的filter列表中不包含当前ext的加-的key
+                    //3.如果用户的配置信息（url中体现）中有可以激活的配置key并且数据不为0,false,null，N/A，也就是说有正常的使用
                     if (! names.contains(name)
                             && ! names.contains(Constants.REMOVE_VALUE_PREFIX + name) 
                             && isActive(activate, url)) {
@@ -217,17 +216,21 @@ public class ExtensionLoader<T> {
             }
             Collections.sort(exts, ActivateComparator.COMPARATOR);
         }
+        //进行到此步骤的时候Dubbo提供的原生的Filter已经被添加完毕了，下面处理用户自己扩展的Filter
         List<T> usrs = new ArrayList<T>();
         for (int i = 0; i < names.size(); i ++) {
         	String name = names.get(i);
+            //如果单个name不是以-开头并且所有的key里面并不包含-'name'（也就是说如果配置成了"dubbo,-dubbo"这种的可以，这个if是进不去的）
             if (! name.startsWith(Constants.REMOVE_VALUE_PREFIX)
             		&& ! names.contains(Constants.REMOVE_VALUE_PREFIX + name)) {
+                //可以通过default关键字替换Dubbo原生的Filter链，主要用来控制调用链顺序
             	if (Constants.DEFAULT_KEY.equals(name)) {
             		if (usrs.size() > 0) {
 	            		exts.addAll(0, usrs);
 	            		usrs.clear();
             		}
             	} else {
+                    //加入用户自己定义的扩展Filter
 	            	T ext = getExtension(name);
 	            	usrs.add(ext);
             	}
@@ -258,6 +261,7 @@ public class ExtensionLoader<T> {
         if (keys == null || keys.length == 0) {
             return true;
         }
+        //遍历激活条件，如果URL中配置例指定的key并且value不为空的情况下就代表匹配成功
         for (String key : keys) {
             for (Map.Entry<String, String> entry : url.getParameters().entrySet()) {
                 String k = entry.getKey();
